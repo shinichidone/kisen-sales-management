@@ -91,15 +91,21 @@ npm run dev
 
 ## Supabase 設定
 
-1. [Supabase](https://supabase.com/) でプロジェクトを作成
-2. **Project Settings → API** で URL と `anon` `public` キーをコピーし `.env` へ
+**新規プロジェクトは作らず、社員名簿・家計簿と同じ既存プロジェクトを使います。**
+
+1. [Supabase Dashboard](https://supabase.com/dashboard) で既存プロジェクトを開く
+2. **Project Settings → API** で URL と `anon` `public` キーをコピーし `.env` へ（社員名簿の `.env` と同じ値で可）
 3. **SQL Editor** を開き、`supabase/migrations/20260310000000_phase1_facilities.sql` の内容を実行
 4. Table Editor で `services` に3件、`facilities` が空であることを確認
+5. 詳細な画面操作は `docs/SETUP_HANDS_ON.md` を参照
+
+既存の `profiles` 等には触れません。テーブル名でアプリを分離します。
 
 ### Phase1 の RLS について
 
 Phase1 はログインなしでMAP検証するため、`anon` に select/insert を一時開放しています。  
-**STEP7（権限管理）で本番向けRLSへ締め直します。** service_role キーはフロントに置かないでください。
+共有プロジェクトでは anon キーが他アプリ前端にも載るため、**本番公開前・STEP7 で必ず本番向けRLSへ締め直してください。**  
+service_role キーはフロントに置かないでください。
 
 ---
 
