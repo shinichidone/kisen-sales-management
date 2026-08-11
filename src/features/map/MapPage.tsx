@@ -78,9 +78,12 @@ export function MapPage() {
 
   const handlePlaceSelect = useCallback((place: PlaceCandidate) => {
     setSelectedPlace(place)
+    setPickedLatLng(null)
     setRegisterMode('place')
     setMapCenter({ lat: place.lat, lng: place.lng })
-    setMessage(null)
+    setMessage(
+      `「${place.name}」を選択しました。地図にオレンジのピンが出ます。種別・サービスを選んで保存してください。`,
+    )
   }, [])
 
   const handleSave = useCallback(
@@ -217,14 +220,17 @@ export function MapPage() {
           zoom={defaultZoom}
           facilities={facilities}
           selectedId={selectedFacilityId}
+          previewPlace={registerMode === 'place' ? selectedPlace : null}
+          previewLatLng={registerMode === 'manual' ? pickedLatLng : null}
           currentLocation={currentLocation}
           mapPickMode={mapPickMode}
           onSelect={(id) => setSelectedFacilityId(id)}
           onMapClick={(latLng) => {
             if (!mapPickMode) return
             setPickedLatLng(latLng)
+            setMapCenter(latLng)
             setMapPickMode(false)
-            setMessage('地図上の位置を緯度経度に反映しました。')
+            setMessage('地図上の位置をセットしました。オレンジのピンが未保存位置です。')
           }}
           onLocate={handleLocate}
         />

@@ -279,6 +279,22 @@
   box-shadow: var(--shadow);
 }
 
+.mapBanner {
+  position: absolute;
+  left: 12px;
+  right: 96px;
+  top: 12px;
+  z-index: 2;
+  background: rgba(255, 247, 237, 0.96);
+  color: var(--warn);
+  border: 1px solid #fdba74;
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+
 .hint {
   font-size: 0.75rem;
   color: var(--muted);

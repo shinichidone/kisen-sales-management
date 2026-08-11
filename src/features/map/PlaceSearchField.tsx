@@ -78,7 +78,9 @@ export function PlaceSearchField({ onSelect }: Props) {
           autoComplete="off"
         />
       </label>
-      <p className={styles.hint}>候補を選ぶと住所・位置情報を自動取得します。</p>
+      <p className={styles.hint}>
+        文字を入力したあと、必ず下に出る候補をクリックして選択してください。Enterだけではピンは出ません。
+      </p>
       {error ? <div className={styles.alert}>{error}</div> : null}
     </div>
   )
