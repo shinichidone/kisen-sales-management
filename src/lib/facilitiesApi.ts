@@ -1,4 +1,5 @@
-import type { Facility, FacilityDraft, Service } from '../types/facility'
+import type { FacilityMemoHistory } from '../types/contact'
+import type { Facility, FacilityDraft, FacilityType, Service } from '../types/facility'
 import { getSupabase } from './supabase'
 
 type FacilityRow = {
@@ -246,3 +247,126 @@ export async function createFacility(draft: FacilityDraft): Promise<Facility> {
   if (fetchError) throw fetchError
   return mapFacility(full as FacilityRow)
 }
+
+const facilitySelect = `
+  id,
+  google_place_id,
+  name,
+  facility_type,
+  address,
+  city,
+  phone,
+  lat,
+  lng,
+  shared_memo,
+  is_active,
+  created_at,
+  updated_at,
+  facility_target_services ( service_id )
+`
+
+export async function fetchFacilityById(facilityId: string): Promise<Facility> {
+  const { data, error } = await getSupabase()
+    .from('facilities')
+    .select(facilitySelect)
+    .eq('id', facilityId)
+    .single()
+
+  if (error) throw error
+  return mapFacility(data as FacilityRow)
+}
+
+export type FacilityUpdateInput = {
+  name: string
+  facility_type: FacilityType
+  phone: string
+  city: string
+  address: string
+  target_service_ids: string[]
+}
+
+export async function updateFacility(
+  facilityId: string,
+  input: FacilityUpdateInput,
+): Promise<Facility> {
+  if (input.target_service_ids.length === 0) {
+    throw new Error('営業対象サービスを1つ以上選択してください。')
+  }
+
+  const supabase = getSupabase()
+  const { error: updateError } = await supabase
+    .from('facilities')
+    .update({
+      name: input.name.trim(),
+      facility_type: input.facility_type,
+      phone: input.phone.trim() || null,
+      city: input.city.trim(),
+      address: input.address.trim(),
+    })
+    .eq('id', facilityId)
+
+  if (updateError) throw updateError
+
+  const { error: deleteError } = await supabase
+    .from('facility_target_services')
+    .delete()
+    .eq('facility_id', facilityId)
+  if (deleteError) throw deleteError
+
+  const { error: linkError } = await supabase.from('facility_target_services').insert(
+    input.target_service_ids.map((serviceId) => ({
+      facility_id: facilityId,
+      service_id: serviceId,
+    })),
+  )
+  if (linkError) throw linkError
+
+  return fetchFacilityById(facilityId)
+}
+
+export async function updateFacilitySharedMemo(
+  facilityId: string,
+  newMemo: string,
+  changedByLabel = '未ログイン',
+): Promise<Facility> {
+  const supabase = getSupabase()
+  const current = await fetchFacilityById(facilityId)
+  const trimmed = newMemo.trim()
+
+  if (current.shared_memo === trimmed) {
+    return current
+  }
+
+  const { error: historyError } = await supabase.from('facility_memo_histories').insert({
+    facility_id: facilityId,
+    previous_memo: current.shared_memo,
+    new_memo: trimmed,
+    changed_by_label: changedByLabel.trim() || '未ログイン',
+  })
+  if (historyError) throw historyError
+
+  const { error: updateError } = await supabase
+    .from('facilities')
+    .update({ shared_memo: trimmed })
+    .eq('id', facilityId)
+  if (updateError) throw updateError
+
+  return fetchFacilityById(facilityId)
+}
+
+export async function fetchFacilityMemoHistories(
+  facilityId: string,
+): Promise<FacilityMemoHistory[]> {
+  const { data, error } = await getSupabase()
+    .from('facility_memo_histories')
+    .select(
+      'id, facility_id, previous_memo, new_memo, changed_by_label, created_at',
+    )
+    .eq('facility_id', facilityId)
+    .order('created_at', { ascending: false })
+    .limit(30)
+
+  if (error) throw error
+  return (data ?? []) as FacilityMemoHistory[]
+}
+

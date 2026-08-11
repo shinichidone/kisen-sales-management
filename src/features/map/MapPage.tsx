@@ -13,6 +13,7 @@ import type {
   Service,
 } from '../../types/facility'
 import { facilityTypeLabel } from '../../types/facility'
+import { FacilityDetail } from '../facilities/FacilityDetail'
 import { FacilityForm } from './FacilityForm'
 import { FacilityMap } from './FacilityMap'
 import { PlaceSearchField, type MapBiasBounds } from './PlaceSearchField'
@@ -41,6 +42,7 @@ export function MapPage() {
     useState<google.maps.LatLngLiteral | null>(null)
   const [mapCenter, setMapCenter] = useState(defaultCenter)
   const [mapBounds, setMapBounds] = useState<MapBiasBounds | null>(null)
+  const [detailFacilityId, setDetailFacilityId] = useState<string | null>(null)
 
   const handleBoundsChanged = useCallback((bounds: MapBiasBounds) => {
     setMapBounds(bounds)
@@ -280,8 +282,17 @@ export function MapPage() {
                   </span>
                 ))}
               </div>
+              <div className={styles.actions} style={{ marginTop: '0.85rem' }}>
+                <button
+                  type="button"
+                  className={styles.primary}
+                  onClick={() => setDetailFacilityId(selectedFacility.id)}
+                >
+                  施設詳細を見る
+                </button>
+              </div>
               <p className={styles.hint}>
-                ※ 訪問数・紹介数・営業履歴は STEP2 以降で追加します。
+                詳細で担当者・共有メモを管理できます。営業履歴は STEP3 で追加します。
               </p>
             </div>
           ) : (
@@ -291,6 +302,19 @@ export function MapPage() {
           )}
         </aside>
       </div>
+
+      {detailFacilityId ? (
+        <FacilityDetail
+          facilityId={detailFacilityId}
+          services={services}
+          onClose={() => setDetailFacilityId(null)}
+          onFacilityUpdated={(updated) => {
+            setFacilities((prev) =>
+              prev.map((item) => (item.id === updated.id ? updated : item)),
+            )
+          }}
+        />
+      ) : null}
     </APIProvider>
   )
 }

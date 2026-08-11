@@ -71,6 +71,21 @@ grant select, insert, delete on table public.facility_target_services to anon, a
 
 ---
 
+## STEP2 SQL（担当者・メモ履歴）
+
+Phase1 のあとに、次も **SQL Editor で実行**してください。
+
+`supabase/migrations/20260311000000_phase2_contacts.sql`
+
+成功後、Table Editor で次があることを確認:
+
+- `contacts`
+- `facility_affiliations`
+- `facility_memo_histories`
+
+
+---
+
 ## 3. Google Cloud / Maps API
 
 1. https://console.cloud.google.com/ を開く
