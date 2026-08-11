@@ -62,9 +62,15 @@ export function MapPage() {
       setServices(nextServices)
       setFacilities(nextFacilities)
     } catch (err) {
+      const detail =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message?: string }).message)
+          : err instanceof Error
+            ? err.message
+            : ''
       setLoadError(
-        err instanceof Error
-          ? err.message
+        detail
+          ? `データの読み込みに失敗しました: ${detail}`
           : 'データの読み込みに失敗しました。Supabase設定を確認してください。',
       )
     } finally {

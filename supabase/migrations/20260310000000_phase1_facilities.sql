@@ -129,3 +129,9 @@ create policy "phase1_facility_target_services_delete_all"
   on public.facility_target_services for delete
   to anon, authenticated
   using (true);
+
+-- RLS に加えて、ロールへのテーブル権限付与が必要
+grant usage on schema public to anon, authenticated;
+grant select on table public.services to anon, authenticated;
+grant select, insert, update on table public.facilities to anon, authenticated;
+grant select, insert, delete on table public.facility_target_services to anon, authenticated;

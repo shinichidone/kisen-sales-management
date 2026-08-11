@@ -49,9 +49,25 @@ Phase1 は検証のため、暫定で `anon` から施設の閲覧・登録を�
 |---|---|
 | `type "facility_type" already exists` | 以前実行済みの可能性。Table Editor で表があるか確認 |
 | `relation "services" already exists` | 同上。中身が喜仙向け3件か確認 |
+| `permission denied for table services` | 下の「権限付与SQL」を追加実行 |
 | 権限エラー | プロジェクトの Owner / 十分な権限で実行 |
 
 既存テーブルを消さないでください。
+
+### 権限付与SQL（permission denied が出るとき）
+
+最初のマイグレーション後に、次も **SQL Editor で実行**してください。
+
+`supabase/migrations/20260310000001_phase1_grants.sql`
+
+または以下をそのまま実行:
+
+```sql
+grant usage on schema public to anon, authenticated;
+grant select on table public.services to anon, authenticated;
+grant select, insert, update on table public.facilities to anon, authenticated;
+grant select, insert, delete on table public.facility_target_services to anon, authenticated;
+```
 
 ---
 
