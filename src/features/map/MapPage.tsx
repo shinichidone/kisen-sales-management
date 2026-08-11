@@ -15,7 +15,7 @@ import type {
 import { facilityTypeLabel } from '../../types/facility'
 import { FacilityForm } from './FacilityForm'
 import { FacilityMap } from './FacilityMap'
-import { PlaceSearchField } from './PlaceSearchField'
+import { PlaceSearchField, type MapBiasBounds } from './PlaceSearchField'
 import styles from './MapPage.module.css'
 
 type RegisterMode = 'place' | 'manual'
@@ -40,6 +40,11 @@ export function MapPage() {
   const [currentLocation, setCurrentLocation] =
     useState<google.maps.LatLngLiteral | null>(null)
   const [mapCenter, setMapCenter] = useState(defaultCenter)
+  const [mapBounds, setMapBounds] = useState<MapBiasBounds | null>(null)
+
+  const handleBoundsChanged = useCallback((bounds: MapBiasBounds) => {
+    setMapBounds(bounds)
+  }, [])
 
   const selectedFacility = useMemo(
     () => facilities.find((item) => item.id === selectedFacilityId) ?? null,
@@ -165,7 +170,11 @@ export function MapPage() {
           </div>
 
           {registerMode === 'place' ? (
-            <PlaceSearchField onSelect={handlePlaceSelect} />
+            <PlaceSearchField
+              onSelect={handlePlaceSelect}
+              biasBounds={mapBounds}
+              biasCenter={mapCenter}
+            />
           ) : null}
 
           <FacilityForm
@@ -239,6 +248,7 @@ export function MapPage() {
             setMessage('地図上の位置をセットしました。オレンジのピンが未保存位置です。')
           }}
           onLocate={handleLocate}
+          onBoundsChanged={handleBoundsChanged}
         />
 
         <aside className={styles.panelRight}>

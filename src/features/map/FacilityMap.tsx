@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Map, useMap } from '@vis.gl/react-google-maps'
 import type { Facility, PlaceCandidate } from '../../types/facility'
+import type { MapBiasBounds } from './PlaceSearchField'
 import styles from './MapPage.module.css'
 
 type Props = {
@@ -15,6 +16,40 @@ type Props = {
   onSelect: (facilityId: string) => void
   onMapClick: (latLng: google.maps.LatLngLiteral) => void
   onLocate: () => void
+  onBoundsChanged?: (bounds: MapBiasBounds) => void
+}
+
+function BoundsReporter({
+  onBoundsChanged,
+}: {
+  onBoundsChanged?: (bounds: MapBiasBounds) => void
+}) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!map || !onBoundsChanged) return
+
+    const emit = () => {
+      const bounds = map.getBounds()
+      if (!bounds) return
+      const ne = bounds.getNorthEast()
+      const sw = bounds.getSouthWest()
+      onBoundsChanged({
+        north: ne.lat(),
+        east: ne.lng(),
+        south: sw.lat(),
+        west: sw.lng(),
+      })
+    }
+
+    emit()
+    const idleListener = map.addListener('idle', emit)
+    return () => {
+      idleListener.remove()
+    }
+  }, [map, onBoundsChanged])
+
+  return null
 }
 
 function MapCamera({
@@ -149,6 +184,7 @@ export function FacilityMap({
   onSelect,
   onMapClick,
   onLocate,
+  onBoundsChanged,
 }: Props) {
   return (
     <div className={styles.mapPane}>
@@ -172,6 +208,7 @@ export function FacilityMap({
           }}
         >
           <MapCamera center={center} zoom={zoom} />
+          <BoundsReporter onBoundsChanged={onBoundsChanged} />
           <Markers
             facilities={facilities}
             selectedId={selectedId}
