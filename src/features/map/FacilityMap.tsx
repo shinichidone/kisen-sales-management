@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Map, useMap } from '@vis.gl/react-google-maps'
+import { Map as GoogleMap, useMap } from '@vis.gl/react-google-maps'
 import type { Facility, PlaceCandidate } from '../../types/facility'
 import { facilityTypeLabel } from '../../types/facility'
 import type { MapBiasBounds } from './PlaceSearchField'
@@ -176,52 +176,101 @@ function Markers({
 >) {
   const map = useMap()
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null)
+  const markersRef = useRef<Map<string, google.maps.Marker>>(new Map())
+  const previewMarkerRef = useRef<google.maps.Marker | null>(null)
+  const currentMarkerRef = useRef<google.maps.Marker | null>(null)
 
+  // 施設・実績データはタップ時点の最新値を参照するため ref に保持する
+  // （マーカーは作り直さず再利用するので、クロージャの値が古くならないようにする）
+  const facilitiesRef = useRef(facilities)
+  facilitiesRef.current = facilities
+  const monthlyStatsRef = useRef(monthlyStats)
+  monthlyStatsRef.current = monthlyStats
+  const onOpenDetailRef = useRef(onOpenDetail)
+  onOpenDetailRef.current = onOpenDetail
+
+  // InfoWindowと「詳細を見る」ボタンのクリック中継は一度だけ設定する
   useEffect(() => {
     if (!map || !window.google?.maps) return
-
     if (!infoWindowRef.current) {
       infoWindowRef.current = new google.maps.InfoWindow()
     }
     const infoWindow = infoWindowRef.current
 
     const domReadyListener = infoWindow.addListener('domready', () => {
-      const container = document.querySelector('[data-open-detail]')
-      const button = container as HTMLButtonElement | null
+      const button = document.querySelector('[data-open-detail]') as HTMLButtonElement | null
       const facilityId = button?.dataset.openDetail
       if (button && facilityId) {
         button.onclick = () => {
           infoWindow.close()
-          onOpenDetail(facilityId)
+          onOpenDetailRef.current(facilityId)
         }
       }
     })
 
-    const markers: google.maps.Marker[] = facilities.map((facility) => {
+    return () => {
+      domReadyListener.remove()
+    }
+  }, [map])
+
+  // 施設ピンは既存のマーカーを再利用し、位置・アイコンだけ更新する
+  // （タップ直後にマーカーを作り直すと、開いた直後にInfoWindowが閉じてしまう不具合になるため）
+  useEffect(() => {
+    if (!map || !window.google?.maps) return
+
+    const currentIds = new Set(facilities.map((facility) => facility.id))
+    for (const [id, marker] of markersRef.current) {
+      if (!currentIds.has(id)) {
+        marker.setMap(null)
+        markersRef.current.delete(id)
+      }
+    }
+
+    facilities.forEach((facility) => {
       const selected = facility.id === selectedId
       const stat = monthlyStats[facility.id]
-      const marker = new google.maps.Marker({
-        map,
-        position: { lat: facility.lat, lng: facility.lng },
-        title: facility.name,
-        zIndex: selected ? 10 : 1,
-        icon: buildMarkerIcon(facility, stat, selected),
-      })
-      marker.addListener('click', () => {
-        onSelect(facility.id)
-        infoWindow.setContent(buildInfoWindowContent(facility, stat))
-        infoWindow.open({ map, anchor: marker })
-      })
-      return marker
-    })
+      let marker = markersRef.current.get(facility.id)
 
-    let previewMarker: google.maps.Marker | null = null
+      if (!marker) {
+        marker = new google.maps.Marker({
+          map,
+          position: { lat: facility.lat, lng: facility.lng },
+          title: facility.name,
+        })
+        marker.addListener('click', () => {
+          const latestFacility =
+            facilitiesRef.current.find((item) => item.id === facility.id) ?? facility
+          const latestStat = monthlyStatsRef.current[facility.id]
+          onSelect(facility.id)
+          const infoWindow = infoWindowRef.current
+          if (!infoWindow) return
+          infoWindow.setContent(buildInfoWindowContent(latestFacility, latestStat))
+          infoWindow.open({ map, anchor: marker })
+        })
+        markersRef.current.set(facility.id, marker)
+      } else {
+        marker.setPosition({ lat: facility.lat, lng: facility.lng })
+        marker.setTitle(facility.name)
+      }
+
+      marker.setIcon(buildMarkerIcon(facility, stat, selected))
+      marker.setZIndex(selected ? 10 : 1)
+    })
+  }, [map, facilities, monthlyStats, selectedId, onSelect])
+
+  // 未保存位置プレビュー用ピン
+  useEffect(() => {
+    if (!map || !window.google?.maps) return
+
     const previewPosition = previewPlace
       ? { lat: previewPlace.lat, lng: previewPlace.lng }
       : previewLatLng
 
+    previewMarkerRef.current?.setMap(null)
+    previewMarkerRef.current = null
+
     if (previewPosition) {
-      previewMarker = new google.maps.Marker({
+      previewMarkerRef.current = new google.maps.Marker({
         map,
         position: previewPosition,
         title: previewPlace?.name ?? '選択中の位置（未保存）',
@@ -238,9 +287,21 @@ function Markers({
       })
     }
 
-    let currentMarker: google.maps.Marker | null = null
+    return () => {
+      previewMarkerRef.current?.setMap(null)
+      previewMarkerRef.current = null
+    }
+  }, [map, previewPlace, previewLatLng])
+
+  // 現在地ピン
+  useEffect(() => {
+    if (!map || !window.google?.maps) return
+
+    currentMarkerRef.current?.setMap(null)
+    currentMarkerRef.current = null
+
     if (currentLocation) {
-      currentMarker = new google.maps.Marker({
+      currentMarkerRef.current = new google.maps.Marker({
         map,
         position: currentLocation,
         title: '現在地',
@@ -257,22 +318,20 @@ function Markers({
     }
 
     return () => {
-      domReadyListener.remove()
-      markers.forEach((marker) => marker.setMap(null))
-      previewMarker?.setMap(null)
-      currentMarker?.setMap(null)
+      currentMarkerRef.current?.setMap(null)
+      currentMarkerRef.current = null
     }
-  }, [
-    map,
-    facilities,
-    monthlyStats,
-    selectedId,
-    previewPlace,
-    previewLatLng,
-    currentLocation,
-    onSelect,
-    onOpenDetail,
-  ])
+  }, [map, currentLocation])
+
+  // アンマウント時に施設ピンを全て片付ける
+  useEffect(() => {
+    return () => {
+      for (const marker of markersRef.current.values()) {
+        marker.setMap(null)
+      }
+      markersRef.current.clear()
+    }
+  }, [])
 
   return null
 }
@@ -296,7 +355,7 @@ export function FacilityMap({
   return (
     <div className={styles.mapPane}>
       <div className={styles.mapFill}>
-        <Map
+        <GoogleMap
           defaultCenter={center}
           defaultZoom={zoom}
           gestureHandling="greedy"
@@ -326,7 +385,7 @@ export function FacilityMap({
             onSelect={onSelect}
             onOpenDetail={onOpenDetail}
           />
-        </Map>
+        </GoogleMap>
       </div>
       {(previewPlace || previewLatLng) && (
         <div className={styles.mapBanner}>

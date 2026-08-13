@@ -147,6 +147,14 @@ export function MapPage() {
     [],
   )
 
+  const handleSelectFacility = useCallback((id: string) => {
+    setSelectedFacilityId(id)
+  }, [])
+
+  const handleOpenDetail = useCallback((id: string) => {
+    setDetailFacilityId(id)
+  }, [])
+
   const handleLocate = useCallback(() => {
     if (!navigator.geolocation) {
       setMessage('この端末では現在地を取得できません。')
@@ -276,8 +284,8 @@ export function MapPage() {
           previewLatLng={registerMode === 'manual' ? pickedLatLng : null}
           currentLocation={currentLocation}
           mapPickMode={mapPickMode}
-          onSelect={(id) => setSelectedFacilityId(id)}
-          onOpenDetail={(id) => setDetailFacilityId(id)}
+          onSelect={handleSelectFacility}
+          onOpenDetail={handleOpenDetail}
           onMapClick={(latLng) => {
             if (!mapPickMode) return
             setPickedLatLng(latLng)
