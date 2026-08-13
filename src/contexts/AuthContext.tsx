@@ -57,7 +57,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAppUser(null)
       return
     }
-    const row = data as AppUserRow | null
+    let row = data as AppUserRow | null
+    if (!row) {
+      const { error: ensureError } = await getSupabase().rpc('kisen_sales_ensure_app_user')
+      if (ensureError) {
+        console.error('ユーザー情報の初期化に失敗しました:', ensureError)
+        setAppUser(null)
+        return
+      }
+      const { data: created, error: reloadError } = await getSupabase()
+        .from('app_users')
+        .select(
+          'id, email, display_name, role, status, created_at, updated_at, app_user_services ( service_id )',
+        )
+        .eq('id', userId)
+        .maybeSingle()
+      if (reloadError) {
+        console.error('ユーザー情報の再取得に失敗しました:', reloadError)
+        setAppUser(null)
+        return
+      }
+      row = created as AppUserRow | null
+    }
     setAppUser(
       row
         ? {
