@@ -107,17 +107,34 @@
   display: none;
 }
 
-@media (max-width: 720px) {
-  .nav {
-    display: none;
-  }
+.mobileSignOutBtn {
+  display: none;
+}
 
-  .userName {
+@media (max-width: 720px) {
+  .header {
     display: none;
   }
 
   .main {
     padding-bottom: var(--bottom-nav-h);
+  }
+
+  .mobileSignOutBtn {
+    display: block;
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 8px);
+    right: 8px;
+    z-index: 25;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(6px);
   }
 
   .mobileNav {

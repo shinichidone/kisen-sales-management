@@ -7,6 +7,8 @@ import {
   fetchFacilities,
   fetchServices,
 } from '../../lib/facilitiesApi'
+import { fetchAllReferralCases } from '../../lib/referralsApi'
+import { fetchAllSalesVisits } from '../../lib/salesVisitsApi'
 import type {
   Facility,
   FacilityDraft,
@@ -16,11 +18,19 @@ import type {
 import { facilityTypeLabel } from '../../types/facility'
 import { FacilityDetail } from '../facilities/FacilityDetail'
 import { FacilityForm } from './FacilityForm'
-import { FacilityMap } from './FacilityMap'
+import { FacilityMap, type FacilityMonthlyStat } from './FacilityMap'
 import { PlaceSearchField, type MapBiasBounds } from './PlaceSearchField'
 import styles from './MapPage.module.css'
 
 type RegisterMode = 'place' | 'manual'
+
+function todayInJst(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
+}
+
+function toJstDateString(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
+}
 
 export function MapPage() {
   const defaultCenter = useMemo(() => env.mapDefaultCenter(), [])
@@ -59,16 +69,39 @@ export function MapPage() {
     [services],
   )
 
+  const [monthlyStats, setMonthlyStats] = useState<Record<string, FacilityMonthlyStat>>({})
+
   const reload = useCallback(async () => {
     setLoading(true)
     setLoadError(null)
     try {
-      const [nextServices, nextFacilities] = await Promise.all([
+      const [nextServices, nextFacilities, visits, referrals] = await Promise.all([
         fetchServices(),
         fetchFacilities(),
+        fetchAllSalesVisits(),
+        fetchAllReferralCases(),
       ])
       setServices(nextServices)
       setFacilities(nextFacilities)
+
+      const today = todayInJst()
+      const monthPrefix = today.slice(0, 7)
+      const stats: Record<string, FacilityMonthlyStat> = {}
+      for (const facility of nextFacilities) {
+        const facilityVisits = visits.filter(
+          (v) => v.facility_id === facility.id && toJstDateString(v.visited_at).startsWith(monthPrefix),
+        )
+        const facilityReferrals = referrals.filter(
+          (r) => r.facility_id === facility.id && r.referred_on.startsWith(monthPrefix),
+        )
+        stats[facility.id] = {
+          visitCount: facilityVisits.length,
+          metCount: facilityVisits.filter((v) => v.result === 'met').length,
+          referralCount: facilityReferrals.length,
+          startedCount: facilityReferrals.filter((r) => r.status === 'started').length,
+        }
+      }
+      setMonthlyStats(stats)
     } catch (err) {
       const detail =
         err && typeof err === 'object' && 'message' in err
@@ -237,7 +270,7 @@ export function MapPage() {
           center={mapCenter}
           zoom={defaultZoom}
           facilities={facilities}
-          services={services}
+          monthlyStats={monthlyStats}
           selectedId={selectedFacilityId}
           previewPlace={registerMode === 'place' ? selectedPlace : null}
           previewLatLng={registerMode === 'manual' ? pickedLatLng : null}

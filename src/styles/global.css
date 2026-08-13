@@ -55,3 +55,9 @@ button {
 a {
   color: var(--accent);
 }
+
+@media (max-width: 720px) {
+  :root {
+    --header-h: 0px;
+  }
+}

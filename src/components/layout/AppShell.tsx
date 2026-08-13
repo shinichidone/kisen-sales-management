@@ -67,6 +67,15 @@ export function AppShell({
 
       <main className={styles.main}>{children}</main>
 
+      <button
+        type="button"
+        className={styles.mobileSignOutBtn}
+        onClick={onSignOut}
+        aria-label="ログアウト"
+      >
+        ログアウト
+      </button>
+
       <nav className={styles.mobileNav}>
         {MOBILE_NAV_ITEMS.map((item) => (
           <button

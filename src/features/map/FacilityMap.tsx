@@ -1,15 +1,22 @@
 import { useEffect, useRef } from 'react'
 import { Map, useMap } from '@vis.gl/react-google-maps'
-import type { Facility, PlaceCandidate, Service } from '../../types/facility'
+import type { Facility, PlaceCandidate } from '../../types/facility'
 import { facilityTypeLabel } from '../../types/facility'
 import type { MapBiasBounds } from './PlaceSearchField'
 import styles from './MapPage.module.css'
+
+export type FacilityMonthlyStat = {
+  visitCount: number
+  metCount: number
+  referralCount: number
+  startedCount: number
+}
 
 type Props = {
   center: google.maps.LatLngLiteral
   zoom: number
   facilities: Facility[]
-  services: Service[]
+  monthlyStats: Record<string, FacilityMonthlyStat>
   selectedId: string | null
   previewPlace: PlaceCandidate | null
   previewLatLng: google.maps.LatLngLiteral | null
@@ -22,7 +29,7 @@ type Props = {
   onBoundsChanged?: (bounds: MapBiasBounds) => void
 }
 
-function escapeHtml(value: string): string {
+function escapeXml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -30,35 +37,64 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;')
 }
 
-function buildInfoWindowContent(facility: Facility, services: Service[]): string {
-  const serviceTags = facility.target_service_ids
-    .map((id) => services.find((service) => service.id === id)?.name ?? id)
-    .map(
-      (name) =>
-        `<span style="display:inline-block;font-size:11px;font-weight:700;color:#0f766e;background:#e6fbf5;padding:3px 8px;border-radius:999px;margin:2px 4px 0 0;">${escapeHtml(name)}</span>`,
-    )
-    .join('')
+function truncateLabel(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text
+  return `${text.slice(0, maxChars)}…`
+}
 
-  const memo = facility.shared_memo?.trim()
+/** 施設名と今月の訪問数を書き込んだラベル付きピンをSVGで生成する */
+function buildMarkerIcon(
+  facility: Facility,
+  stat: FacilityMonthlyStat | undefined,
+  selected: boolean,
+): google.maps.Icon {
+  const visitCount = stat?.visitCount ?? 0
+  const label = truncateLabel(facility.name, 9)
+  const countText = `今月 ${visitCount}件`
+  const dotColor = selected ? '#0f766e' : '#14b8a6'
+  const countColor = visitCount > 0 ? '#0f766e' : '#94a3b8'
+  const borderColor = selected ? '#0f766e' : '#cbd5e1'
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="54">
+      <rect x="2" y="2" width="116" height="32" rx="8" fill="#ffffff" stroke="${borderColor}" stroke-width="1.5" />
+      <text x="60" y="15" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="#0f172a">${escapeXml(label)}</text>
+      <text x="60" y="28" text-anchor="middle" font-family="sans-serif" font-size="10.5" font-weight="800" fill="${countColor}">${escapeXml(countText)}</text>
+      <line x1="60" y1="34" x2="60" y2="42" stroke="${borderColor}" stroke-width="2" />
+      <circle cx="60" cy="46" r="${selected ? 6 : 5}" fill="${dotColor}" stroke="#ffffff" stroke-width="2" />
+    </svg>`
+
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: new google.maps.Size(120, 54),
+    anchor: new google.maps.Point(60, 46),
+  }
+}
+
+function buildInfoWindowContent(
+  facility: Facility,
+  stat: FacilityMonthlyStat | undefined,
+): string {
+  const visitCount = stat?.visitCount ?? 0
+  const metCount = stat?.metCount ?? 0
+  const referralCount = stat?.referralCount ?? 0
+  const startedCount = stat?.startedCount ?? 0
+  const meetRateText =
+    visitCount > 0 ? `${Math.round((metCount / visitCount) * 100)}%` : '－'
 
   return `
     <div style="min-width:200px;max-width:240px;font-family:inherit;">
-      <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:2px;">${escapeHtml(facility.name)}</div>
-      <div style="font-size:11px;color:#64748b;margin-bottom:6px;">${escapeHtml(facilityTypeLabel(facility.facility_type))} ・ ${escapeHtml(facility.city)}</div>
-      ${
-        facility.phone
-          ? `<div style="font-size:12px;color:#334155;margin-bottom:4px;">☎ ${escapeHtml(facility.phone)}</div>`
-          : ''
-      }
-      ${serviceTags ? `<div style="margin-bottom:6px;">${serviceTags}</div>` : ''}
-      ${
-        memo
-          ? `<div style="font-size:11px;color:#64748b;margin-bottom:8px;white-space:pre-wrap;">${escapeHtml(memo.length > 60 ? `${memo.slice(0, 60)}…` : memo)}</div>`
-          : ''
-      }
+      <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:2px;">${escapeXml(facility.name)}</div>
+      <div style="font-size:11px;color:#64748b;margin-bottom:8px;">${escapeXml(facilityTypeLabel(facility.facility_type))} ・ ${escapeXml(facility.city)}</div>
+      <div style="font-size:11px;font-weight:700;color:#115e59;margin-bottom:4px;">今月の営業実績</div>
+      <table style="width:100%;font-size:12px;color:#334155;border-collapse:collapse;margin-bottom:8px;">
+        <tr><td style="padding:2px 0;">訪問数</td><td style="text-align:right;font-weight:700;">${visitCount}件</td></tr>
+        <tr><td style="padding:2px 0;">面会数</td><td style="text-align:right;font-weight:700;">${metCount}件（${meetRateText}）</td></tr>
+        <tr><td style="padding:2px 0;">紹介数</td><td style="text-align:right;font-weight:700;">${referralCount}件</td></tr>
+        <tr><td style="padding:2px 0;">利用開始</td><td style="text-align:right;font-weight:700;">${startedCount}件</td></tr>
+      </table>
       <button
         type="button"
-        data-open-detail="${escapeHtml(facility.id)}"
+        data-open-detail="${escapeXml(facility.id)}"
         style="width:100%;border:none;border-radius:8px;background:#0f766e;color:#fff;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer;"
       >施設詳細を見る</button>
     </div>
@@ -120,7 +156,7 @@ function MapCamera({
 
 function Markers({
   facilities,
-  services,
+  monthlyStats,
   selectedId,
   previewPlace,
   previewLatLng,
@@ -130,7 +166,7 @@ function Markers({
 }: Pick<
   Props,
   | 'facilities'
-  | 'services'
+  | 'monthlyStats'
   | 'selectedId'
   | 'previewPlace'
   | 'previewLatLng'
@@ -163,23 +199,17 @@ function Markers({
 
     const markers: google.maps.Marker[] = facilities.map((facility) => {
       const selected = facility.id === selectedId
+      const stat = monthlyStats[facility.id]
       const marker = new google.maps.Marker({
         map,
         position: { lat: facility.lat, lng: facility.lng },
         title: facility.name,
         zIndex: selected ? 10 : 1,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: selected ? 12 : 10,
-          fillColor: selected ? '#0f766e' : '#14b8a6',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
-        },
+        icon: buildMarkerIcon(facility, stat, selected),
       })
       marker.addListener('click', () => {
         onSelect(facility.id)
-        infoWindow.setContent(buildInfoWindowContent(facility, services))
+        infoWindow.setContent(buildInfoWindowContent(facility, stat))
         infoWindow.open({ map, anchor: marker })
       })
       return marker
@@ -235,7 +265,7 @@ function Markers({
   }, [
     map,
     facilities,
-    services,
+    monthlyStats,
     selectedId,
     previewPlace,
     previewLatLng,
@@ -251,7 +281,7 @@ export function FacilityMap({
   center,
   zoom,
   facilities,
-  services,
+  monthlyStats,
   selectedId,
   previewPlace,
   previewLatLng,
@@ -288,7 +318,7 @@ export function FacilityMap({
           <BoundsReporter onBoundsChanged={onBoundsChanged} />
           <Markers
             facilities={facilities}
-            services={services}
+            monthlyStats={monthlyStats}
             selectedId={selectedId}
             previewPlace={previewPlace}
             previewLatLng={previewLatLng}
