@@ -82,20 +82,32 @@ function buildInfoWindowContent(
     visitCount > 0 ? `${Math.round((metCount / visitCount) * 100)}%` : '－'
 
   return `
-    <div style="min-width:200px;max-width:240px;font-family:inherit;">
-      <div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:2px;">${escapeXml(facility.name)}</div>
+    <div style="width:220px;font-family:inherit;padding:2px 0 4px;">
+      <div style="font-size:13px;font-weight:700;color:#0f172a;line-height:1.3;margin-bottom:2px;">${escapeXml(facility.name)}</div>
       <div style="font-size:11px;color:#64748b;margin-bottom:8px;">${escapeXml(facilityTypeLabel(facility.facility_type))} ・ ${escapeXml(facility.city)}</div>
-      <div style="font-size:11px;font-weight:700;color:#115e59;margin-bottom:4px;">今月の営業実績</div>
-      <table style="width:100%;font-size:12px;color:#334155;border-collapse:collapse;margin-bottom:8px;">
-        <tr><td style="padding:2px 0;">訪問数</td><td style="text-align:right;font-weight:700;">${visitCount}件</td></tr>
-        <tr><td style="padding:2px 0;">面会数</td><td style="text-align:right;font-weight:700;">${metCount}件（${meetRateText}）</td></tr>
-        <tr><td style="padding:2px 0;">紹介数</td><td style="text-align:right;font-weight:700;">${referralCount}件</td></tr>
-        <tr><td style="padding:2px 0;">利用開始</td><td style="text-align:right;font-weight:700;">${startedCount}件</td></tr>
-      </table>
+      <div style="font-size:11px;font-weight:700;color:#115e59;margin-bottom:6px;">今月の営業実績</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+        <div style="background:#f5f8f7;border-radius:8px;padding:6px 8px;">
+          <div style="font-size:10px;color:#64748b;">訪問</div>
+          <div style="font-size:16px;font-weight:800;color:#115e59;">${visitCount}</div>
+        </div>
+        <div style="background:#f5f8f7;border-radius:8px;padding:6px 8px;">
+          <div style="font-size:10px;color:#64748b;">面会</div>
+          <div style="font-size:16px;font-weight:800;color:#115e59;">${metCount}<span style="font-size:10px;font-weight:700;margin-left:2px;">(${meetRateText})</span></div>
+        </div>
+        <div style="background:#f5f8f7;border-radius:8px;padding:6px 8px;">
+          <div style="font-size:10px;color:#64748b;">紹介</div>
+          <div style="font-size:16px;font-weight:800;color:#115e59;">${referralCount}</div>
+        </div>
+        <div style="background:#f5f8f7;border-radius:8px;padding:6px 8px;">
+          <div style="font-size:10px;color:#64748b;">利用開始</div>
+          <div style="font-size:16px;font-weight:800;color:#115e59;">${startedCount}</div>
+        </div>
+      </div>
       <button
         type="button"
         data-open-detail="${escapeXml(facility.id)}"
-        style="width:100%;border:none;border-radius:8px;background:#0f766e;color:#fff;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer;"
+        style="display:block;width:100%;box-sizing:border-box;border:none;border-radius:8px;background:#0f766e;color:#fff;font-size:13px;font-weight:700;padding:10px 0;cursor:pointer;"
       >営業記録を入力する</button>
     </div>
   `
@@ -179,6 +191,7 @@ function Markers({
   const markersRef = useRef<Map<string, google.maps.Marker>>(new Map())
   const previewMarkerRef = useRef<google.maps.Marker | null>(null)
   const currentMarkerRef = useRef<google.maps.Marker | null>(null)
+  const openedAtRef = useRef(0)
 
   // 施設・実績データはタップ時点の最新値を参照するため ref に保持する
   // （マーカーは作り直さず再利用するので、クロージャの値が古くならないようにする）
@@ -193,7 +206,10 @@ function Markers({
   useEffect(() => {
     if (!map || !window.google?.maps) return
     if (!infoWindowRef.current) {
-      infoWindowRef.current = new google.maps.InfoWindow()
+      infoWindowRef.current = new google.maps.InfoWindow({
+        maxWidth: 260,
+        headerDisabled: true,
+      })
     }
     const infoWindow = infoWindowRef.current
 
@@ -208,8 +224,14 @@ function Markers({
       }
     })
 
+    const mapClickListener = map.addListener('click', () => {
+      if (Date.now() - openedAtRef.current < 400) return
+      infoWindow.close()
+    })
+
     return () => {
       domReadyListener.remove()
+      mapClickListener.remove()
     }
   }, [map])
 
@@ -244,6 +266,7 @@ function Markers({
           onSelect(facility.id)
           const infoWindow = infoWindowRef.current
           if (!infoWindow) return
+          openedAtRef.current = Date.now()
           infoWindow.setContent(buildInfoWindowContent(latestFacility, latestStat))
           infoWindow.open({ map, anchor: marker })
         })

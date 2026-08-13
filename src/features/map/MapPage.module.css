@@ -31,6 +31,22 @@
   background: #e8eef0;
 }
 
+.mapPane :global(.gm-style-iw-c) {
+  padding: 12px !important;
+  max-height: none !important;
+}
+
+.mapPane :global(.gm-style-iw-d) {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.mapPane :global(.gm-style-iw-ch),
+.mapPane :global(.gm-style-iw-chr),
+.mapPane :global(.gm-ui-hover-effect) {
+  display: none !important;
+}
+
 .mapFill {
   position: absolute;
   inset: 0;
