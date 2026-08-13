@@ -1,0 +1,159 @@
+.page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--accent-deep);
+}
+
+.muted {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cardHeader strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.email {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+.statusBadgeActive,
+.statusBadgePending,
+.statusBadgeDisabled {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.statusBadgeActive {
+  background: var(--accent-pale);
+  color: var(--accent-deep);
+}
+
+.statusBadgePending {
+  background: var(--warn-pale);
+  color: var(--warn);
+}
+
+.statusBadgeDisabled {
+  background: var(--danger-pale);
+  color: var(--danger);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  background: #fff;
+  font-size: 0.82rem;
+}
+
+.sectionTitle {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-deep);
+}
+
+.checkGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.checkItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.alert,
+.alertOk {
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.alert {
+  background: var(--danger-pale);
+  color: var(--danger);
+}
+
+.alertOk {
+  background: var(--accent-pale);
+  color: var(--accent-deep);
+}
+
+.empty {
+  font-size: 0.85rem;
+  color: var(--muted);
+}

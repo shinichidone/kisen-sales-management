@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { APIProvider } from '@vis.gl/react-google-maps'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { env } from '../../lib/env'
 import {
   createFacility,
@@ -203,7 +204,7 @@ export function MapPage() {
 
           <div>
             <h2 className={styles.sectionTitle}>登録済み施設</h2>
-            {loading ? <p className={styles.empty}>読み込み中…</p> : null}
+            {loading ? <LoadingSpinner /> : null}
             {!loading && facilities.length === 0 ? (
               <p className={styles.empty}>まだ施設がありません。左上から登録してください。</p>
             ) : null}

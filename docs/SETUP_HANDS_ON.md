@@ -11,8 +11,8 @@ Phase1 を動かすために、あなた側で行う設定です。
 
 同じプロジェクトにテーブルを追加しますが、既存の `profiles` 等には触れません。
 
-Phase1 は検証のため、暫定で `anon` から施設の閲覧・登録を許可しています。  
-**anon キーは他アプリのフロントにも載るため、本番公開前に必ず RLS を締め直してください（STEP7）。**
+Phase1〜6 は検証のため、暫定で `anon` から施設の閲覧・登録を許可していました。  
+**STEP7 でログイン必須の役割ベース RLS に締め直し済みです。** 未実行の場合は「STEP7 SQL・認証設定」章を参照してください。
 
 ---
 
@@ -83,6 +83,110 @@ Phase1 のあとに、次も **SQL Editor で実行**してください。
 - `facility_affiliations`
 - `facility_memo_histories`
 
+続けて、担当者の削除機能のために次も実行してください。
+
+`supabase/migrations/20260311000001_phase2_contacts_delete.sql`
+
+---
+
+## STEP3 SQL（営業履歴）
+
+`supabase/migrations/20260312000000_phase3_sales_visits.sql`
+
+成功後、Table Editor で次があることを確認:
+
+- `sales_visits`
+- `sales_visit_contacts`
+- `sales_visit_services`
+
+※ 営業履歴の削除UIは意図的に未実装です（指示書上、削除はシステム管理者のみの権限のため、STEP7でログイン・権限管理を入れてから対応します）。
+
+---
+
+## STEP4（次回フォロー管理）
+
+STEP4は新しいテーブルを追加しません。STEP3の `sales_visits` にある
+`next_follow_up_on` / `follow_up_note` / `follow_up_assignee` をそのまま使います。
+追加のSQL実行は不要です。
+
+画面上部のナビゲーションに「フォロー管理」タブが増えているので、それを開いて確認してください。
+
+---
+
+## STEP5 SQL（紹介案件）
+
+`supabase/migrations/20260313000000_phase5_referral_cases.sql`
+
+成功後、Table Editor で `referral_cases` テーブルがあることを確認してください。
+
+施設詳細に「紹介案件」タブが増えます。案件番号（例: `RC-00001`）は自動採番されます。
+
+---
+
+## STEP6（営業分析一覧）
+
+STEP6は新しいテーブルを追加しません。既存の `facilities` / `sales_visits` / `referral_cases`
+から集計するだけなので、追加のSQL実行は不要です。
+
+画面上部のナビゲーションに「分析」タブが増えます。列見出しをクリックすると並び替えができます。
+
+---
+
+## STEP7 SQL・認証設定（ログイン・権限管理・スマホUI）
+
+**重要: このSTEPを実行すると、ログインしないと一切データが見えなくなります（意図的な破壊的変更）。**
+実行前に他の作業者に共有してください。
+
+### 7-1. SQLを2つ実行
+
+1. `supabase/migrations/20260314000000_phase7_auth_roles.sql` を SQL Editor で実行
+   - `app_users` / `app_user_services` テーブル、新規登録時の自動作成トリガー、権限判定用の関数が追加されます
+2. 続けて `supabase/migrations/20260314000001_phase7_rls_tighten.sql` を実行
+   - これまでの「anon全開放」ポリシーが削除され、ログイン済み・承認済み（`active`）ユーザーのみアクセスできるポリシーに置き換わります
+
+成功後、Table Editor で `app_users` / `app_user_services` テーブルがあることを確認してください。
+
+### 7-2. Supabase Authの設定
+
+**Authentication → Sign In / Providers → Email**:
+
+- **Confirm email** を **ON**（メール確認必須にする）
+
+**Authentication → URL Configuration → Redirect URLs** に追加（Site URLは社員名簿のまま変更しないこと）:
+
+```
+http://localhost:5173/**
+https://（営業管理の Netlify URL）/**
+```
+
+### 7-3. 最初のシステム管理者をブートストラップする
+
+このアプリにはメール送信によるユーザー招待機能がないため、**最初の1人だけ**手動でシステム管理者にします。
+
+1. 営業管理アプリの画面で「新規登録」タブから、自分の名前・メールアドレス・パスワードで登録する
+2. 届いた確認メールのリンクを開く（メール確認が完了する）
+3. Supabase の **SQL Editor** で、自分のメールアドレスを使って次を実行する:
+
+   ```sql
+   update public.app_users
+   set role = 'system_admin', status = 'active'
+   where email = '自分のメールアドレス@example.com';
+   ```
+
+4. 営業管理アプリに戻ってログインし直す（一度ログアウト→ログイン、またはページ再読み込み）
+5. ヘッダーに「ユーザー管理」タブが表示されればシステム管理者への昇格が成功しています
+
+以降の他のメンバーは、各自「新規登録」→メール確認 → **システム管理者が「ユーザー管理」画面で承認・役割・所属事業所を設定** という流れで利用開始できます。
+
+### 動作確認チェックリスト（STEP7）
+
+- [ ] 未ログインで開くとログイン画面が出る
+- [ ] 新規登録すると確認メールが届く
+- [ ] メール確認前は承認待ち画面が出る
+- [ ] 上記手順で自分をシステム管理者にできる
+- [ ] ログイン後、ホーム画面が表示される
+- [ ] 「ユーザー管理」タブでほかの登録者を承認・役割変更できる
+- [ ] スマホ幅で下部タブバー（ホーム/MAP/フォロー/分析）が表示される
 
 ---
 
@@ -142,19 +246,11 @@ npm run dev
 
 ---
 
-## 5. Supabase Auth URL（後でログインを入れるとき）
+## 5. Supabase Auth URL
 
-今は Phase1 でログイン必須にしていません。  
-STEP7 で認証を入れるときは:
+STEP7でログインを導入済みです。設定手順は「STEP7 SQL・認証設定」章を参照してください。
 
-**Authentication → URL Configuration → Redirect URLs** に追加のみ（Site URL は社員名簿のまま推奨）:
-
-```
-http://localhost:5173/**
-https://（営業管理の Netlify URL）/**
-```
-
-Site URL を営業管理だけに書き換えると、社員名簿のメールリンクが壊れます。
+Site URL を営業管理だけに書き換えると、社員名簿のメールリンクが壊れるため変更しないこと。
 
 ---
 

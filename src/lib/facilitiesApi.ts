@@ -327,7 +327,7 @@ export async function updateFacility(
 export async function updateFacilitySharedMemo(
   facilityId: string,
   newMemo: string,
-  changedByLabel = '未ログイン',
+  changedByLabel: string,
 ): Promise<Facility> {
   const supabase = getSupabase()
   const current = await fetchFacilityById(facilityId)
@@ -341,7 +341,7 @@ export async function updateFacilitySharedMemo(
     facility_id: facilityId,
     previous_memo: current.shared_memo,
     new_memo: trimmed,
-    changed_by_label: changedByLabel.trim() || '未ログイン',
+    changed_by_label: changedByLabel.trim() || '（不明なユーザー）',
   })
   if (historyError) throw historyError
 

@@ -204,6 +204,41 @@ export async function endAffiliation(affiliationId: string): Promise<void> {
   if (error) throw error
 }
 
+/**
+ * 施設の担当者情報を完全に削除する（登録ミスの訂正用）。
+ * 対象の所属レコードを削除し、その人物が他に所属を持たない場合は
+ * 人物データ（contacts）自体も削除する。
+ */
+export async function deleteFacilityContact(
+  affiliationId: string,
+  contactId: string,
+): Promise<{ contactDeleted: boolean }> {
+  const supabase = getSupabase()
+
+  const { error: deleteAffiliationError } = await supabase
+    .from('facility_affiliations')
+    .delete()
+    .eq('id', affiliationId)
+  if (deleteAffiliationError) throw deleteAffiliationError
+
+  const { count, error: countError } = await supabase
+    .from('facility_affiliations')
+    .select('id', { count: 'exact', head: true })
+    .eq('contact_id', contactId)
+  if (countError) throw countError
+
+  if ((count ?? 0) === 0) {
+    const { error: deleteContactError } = await supabase
+      .from('contacts')
+      .delete()
+      .eq('id', contactId)
+    if (deleteContactError) throw deleteContactError
+    return { contactDeleted: true }
+  }
+
+  return { contactDeleted: false }
+}
+
 /** 既存の人物を別施設へ現所属として追加（異動先登録） */
 export async function transferContactToFacility(
   contactId: string,

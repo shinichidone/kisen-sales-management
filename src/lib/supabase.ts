@@ -7,8 +7,9 @@ export function getSupabase(): SupabaseClient {
   if (!client) {
     client = createClient(env.supabaseUrl(), env.supabaseAnonKey(), {
       auth: {
-        persistSession: false,
-        autoRefreshToken: false,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
       },
     })
   }
