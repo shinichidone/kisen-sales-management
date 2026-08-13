@@ -96,7 +96,7 @@ function buildInfoWindowContent(
         type="button"
         data-open-detail="${escapeXml(facility.id)}"
         style="width:100%;border:none;border-radius:8px;background:#0f766e;color:#fff;font-size:12px;font-weight:700;padding:7px 0;cursor:pointer;"
-      >施設詳細を見る</button>
+      >営業記録を入力する</button>
     </div>
   `
 }

@@ -16,7 +16,7 @@ import type {
   Service,
 } from '../../types/facility'
 import { facilityTypeLabel } from '../../types/facility'
-import { FacilityDetail } from '../facilities/FacilityDetail'
+import { FacilityDetail, type FacilityDetailTab } from '../facilities/FacilityDetail'
 import { FacilityForm } from './FacilityForm'
 import { FacilityMap, type FacilityMonthlyStat } from './FacilityMap'
 import { PlaceSearchField, type MapBiasBounds } from './PlaceSearchField'
@@ -54,6 +54,7 @@ export function MapPage() {
   const [mapCenter, setMapCenter] = useState(defaultCenter)
   const [mapBounds, setMapBounds] = useState<MapBiasBounds | null>(null)
   const [detailFacilityId, setDetailFacilityId] = useState<string | null>(null)
+  const [detailInitialTab, setDetailInitialTab] = useState<FacilityDetailTab>('overview')
 
   const handleBoundsChanged = useCallback((bounds: MapBiasBounds) => {
     setMapBounds(bounds)
@@ -151,8 +152,11 @@ export function MapPage() {
     setSelectedFacilityId(id)
   }, [])
 
+  // 地図ピンからの遷移は「営業した後に記録を入力する」が最も多い使い方なので、
+  // 営業履歴タブをすぐ入力できる状態で開く
   const handleOpenDetail = useCallback((id: string) => {
     setDetailFacilityId(id)
+    setDetailInitialTab('visits')
   }, [])
 
   const handleLocate = useCallback(() => {
@@ -330,7 +334,10 @@ export function MapPage() {
                 <button
                   type="button"
                   className={styles.primary}
-                  onClick={() => setDetailFacilityId(selectedFacility.id)}
+                  onClick={() => {
+                    setDetailFacilityId(selectedFacility.id)
+                    setDetailInitialTab('overview')
+                  }}
                 >
                   施設詳細を見る
                 </button>
@@ -351,6 +358,7 @@ export function MapPage() {
         <FacilityDetail
           facilityId={detailFacilityId}
           services={services}
+          initialTab={detailInitialTab}
           onClose={() => setDetailFacilityId(null)}
           onFacilityUpdated={(updated) => {
             setFacilities((prev) =>
