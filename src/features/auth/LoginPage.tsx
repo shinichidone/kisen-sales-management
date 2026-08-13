@@ -56,13 +56,19 @@ export function LoginPage() {
         password,
         options: {
           data: { display_name: displayName.trim() },
-          emailRedirectTo: window.location.origin,
         },
       })
       if (signUpError) throw signUpError
-      setMessage(
-        '登録しました。確認メールに記載されたリンクを開いてください。メール確認後、システム管理者の承認が完了するとログインできます。',
-      )
+
+      const { error: signInError } = await getSupabase().auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
+      if (signInError) {
+        setMessage(
+          '登録しました。ログインタブから同じメールアドレスとパスワードでログインしてください。システム管理者の承認後に利用できます。',
+        )
+      }
     } catch (err) {
       console.error('新規登録に失敗しました:', err)
       setError(getErrorMessage(err, '新規登録に失敗しました。'))
@@ -186,7 +192,7 @@ export function LoginPage() {
               {submitting ? '登録中…' : '新規登録'}
             </button>
             <p className={styles.hint}>
-              登録後、メール確認とシステム管理者による承認が必要です。承認されるまでデータは表示されません。
+              登録後、システム管理者が「ユーザー管理」で承認すると利用できます。確認メールは使いません。
             </p>
           </form>
         )}
