@@ -237,12 +237,14 @@ export function MapPage() {
           center={mapCenter}
           zoom={defaultZoom}
           facilities={facilities}
+          services={services}
           selectedId={selectedFacilityId}
           previewPlace={registerMode === 'place' ? selectedPlace : null}
           previewLatLng={registerMode === 'manual' ? pickedLatLng : null}
           currentLocation={currentLocation}
           mapPickMode={mapPickMode}
           onSelect={(id) => setSelectedFacilityId(id)}
+          onOpenDetail={(id) => setDetailFacilityId(id)}
           onMapClick={(latLng) => {
             if (!mapPickMode) return
             setPickedLatLng(latLng)

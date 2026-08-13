@@ -304,7 +304,7 @@
 @media (max-width: 960px) {
   .page {
     grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(280px, 42vh) auto;
+    grid-template-rows: minmax(340px, 56vh) auto auto;
     height: auto;
     min-height: calc(100vh - var(--header-h));
   }
@@ -317,10 +317,14 @@
   }
 
   .mapPane {
-    order: 0;
+    order: -1;
   }
 
   .panel {
-    order: -1;
+    order: 0;
+  }
+
+  .panelRight {
+    order: 1;
   }
 }
