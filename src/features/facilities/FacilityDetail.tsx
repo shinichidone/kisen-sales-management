@@ -586,7 +586,9 @@ export function FacilityDetail({
                           }
                           setLat(result.lat)
                           setLng(result.lng)
-                          setMessage('住所の位置にピンを合わせました。ずれていればドラッグで微調整してください。')
+                          setMessage(
+                            `「${result.formattedAddress}」の位置に合わせました。ずれていればドラッグで微調整し、概要を保存してください。`,
+                          )
                         } catch (err) {
                           console.error('住所からの位置特定に失敗しました:', err)
                           setError(getErrorMessage(err, '住所から位置を特定できませんでした。'))

@@ -48,6 +48,7 @@ function DraggablePin({ lat, lng, onMove }: Props) {
   useEffect(() => {
     if (!map) return
     map.panTo({ lat, lng })
+    if ((map.getZoom() ?? 16) < 16) map.setZoom(17)
   }, [map, lat, lng])
 
   useEffect(() => {
@@ -65,8 +66,9 @@ export function FacilityLocationEditor({ lat, lng, onMove }: Props) {
     <div className={styles.locationMap}>
       <APIProvider apiKey={env.googleMapsApiKey()} language="ja" region="JP">
         <Map
+          key={`${lat.toFixed(5)},${lng.toFixed(5)}`}
           defaultCenter={{ lat, lng }}
-          defaultZoom={16}
+          defaultZoom={17}
           gestureHandling="greedy"
           disableDefaultUI={false}
           clickableIcons={false}
