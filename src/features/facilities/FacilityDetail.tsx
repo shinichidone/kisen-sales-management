@@ -150,7 +150,6 @@ export function FacilityDetail({
   const [phone, setPhone] = useState('')
   const [city, setCity] = useState('')
   const [address, setAddress] = useState('')
-  const [targetServiceIds, setTargetServiceIds] = useState<string[]>([])
   const [savingOverview, setSavingOverview] = useState(false)
 
   const [currentContacts, setCurrentContacts] = useState<FacilityAffiliation[]>([])
@@ -191,7 +190,6 @@ export function FacilityDetail({
       setPhone(nextFacility.phone ?? '')
       setCity(nextFacility.city)
       setAddress(nextFacility.address)
-      setTargetServiceIds(nextFacility.target_service_ids)
       setMemo(nextFacility.shared_memo)
       setCurrentContacts(affiliations.current)
       setPastContacts(affiliations.past)
@@ -240,12 +238,6 @@ export function FacilityDetail({
     void reload()
   }, [reload])
 
-  function toggleService(id: string) {
-    setTargetServiceIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    )
-  }
-
   async function handleSaveOverview(event: React.FormEvent) {
     event.preventDefault()
     setSavingOverview(true)
@@ -258,7 +250,6 @@ export function FacilityDetail({
         phone,
         city,
         address,
-        target_service_ids: targetServiceIds,
       })
       setFacility(updated)
       onFacilityUpdated(updated)
@@ -563,21 +554,6 @@ export function FacilityDetail({
                   onChange={(e) => setPhone(e.target.value)}
                 />
               </label>
-              <div>
-                <p className={styles.sectionTitle}>営業対象サービス</p>
-                <div className={styles.checkGroup}>
-                  {services.map((service) => (
-                    <label key={service.id} className={styles.checkItem}>
-                      <input
-                        type="checkbox"
-                        checked={targetServiceIds.includes(service.id)}
-                        onChange={() => toggleService(service.id)}
-                      />
-                      <span>{service.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
               <p className={styles.muted}>
                 位置情報（緯度経度）と Google Place ID はMAP登録時の値を維持します。
               </p>

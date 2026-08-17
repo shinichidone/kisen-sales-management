@@ -4,14 +4,12 @@ import {
   type FacilityDraft,
   type FacilityType,
   type PlaceCandidate,
-  type Service,
 } from '../../types/facility'
 import { cityFromAddressText } from '../../lib/city'
 import styles from './MapPage.module.css'
 
 type Props = {
   mode: 'place' | 'manual'
-  services: Service[]
   initialPlace: PlaceCandidate | null
   pickedLatLng: { lat: number; lng: number } | null
   onAddressGeocode: (address: string) => Promise<{ lat: number; lng: number; city: string } | null>
@@ -21,7 +19,6 @@ type Props = {
 
 export function FacilityForm({
   mode,
-  services,
   initialPlace,
   pickedLatLng,
   onAddressGeocode,
@@ -29,7 +26,6 @@ export function FacilityForm({
   onCancel,
 }: Props) {
   const [facilityType, setFacilityType] = useState<FacilityType>('home_care_support')
-  const [targetServiceIds, setTargetServiceIds] = useState<string[]>([])
   const [sharedMemo, setSharedMemo] = useState('')
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
@@ -65,7 +61,6 @@ export function FacilityForm({
 
   function resetLocal() {
     setSharedMemo('')
-    setTargetServiceIds([])
     setFacilityType('home_care_support')
     setName('')
     setAddress('')
@@ -74,12 +69,6 @@ export function FacilityForm({
     setLat('')
     setLng('')
     setError(null)
-  }
-
-  function toggleService(id: string) {
-    setTargetServiceIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    )
   }
 
   async function handleSubmit(event: React.FormEvent) {
@@ -104,7 +93,7 @@ export function FacilityForm({
           lat: placeSummary.lat,
           lng: placeSummary.lng,
           shared_memo: sharedMemo,
-          target_service_ids: targetServiceIds,
+          target_service_ids: [],
         }
       } else {
         const latNum = Number(lat)
@@ -125,7 +114,7 @@ export function FacilityForm({
           lat: latNum,
           lng: lngNum,
           shared_memo: sharedMemo,
-          target_service_ids: targetServiceIds,
+          target_service_ids: [],
         }
       }
 
@@ -223,22 +212,6 @@ export function FacilityForm({
           ))}
         </select>
       </label>
-
-      <div>
-        <p className={styles.sectionTitle}>営業対象サービス（複数可）</p>
-        <div className={styles.checkGroup}>
-          {services.map((service) => (
-            <label key={service.id} className={styles.checkItem}>
-              <input
-                type="checkbox"
-                checked={targetServiceIds.includes(service.id)}
-                onChange={() => toggleService(service.id)}
-              />
-              <span>{service.name}</span>
-            </label>
-          ))}
-        </div>
-      </div>
 
       <label className={styles.label}>
         施設共有メモ（任意）

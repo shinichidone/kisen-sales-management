@@ -65,11 +65,6 @@ export function MapPage() {
     [facilities, selectedFacilityId],
   )
 
-  const serviceName = useCallback(
-    (id: string) => services.find((service) => service.id === id)?.name ?? id,
-    [services],
-  )
-
   const [monthlyStats, setMonthlyStats] = useState<Record<string, FacilityMonthlyStat>>({})
 
   const reload = useCallback(async () => {
@@ -250,7 +245,6 @@ export function MapPage() {
 
           <FacilityForm
             mode={registerMode}
-            services={services}
             initialPlace={selectedPlace}
             pickedLatLng={pickedLatLng}
             onAddressGeocode={handleAddressGeocode}
@@ -343,13 +337,6 @@ export function MapPage() {
                 <dt>共有メモ</dt>
                 <dd>{selectedFacility.shared_memo || '（なし）'}</dd>
               </dl>
-              <div className={styles.tags}>
-                {selectedFacility.target_service_ids.map((id) => (
-                  <span key={id} className={styles.tag}>
-                    {serviceName(id)}
-                  </span>
-                ))}
-              </div>
               <div className={styles.actions} style={{ marginTop: '0.85rem' }}>
                 <button
                   type="button"

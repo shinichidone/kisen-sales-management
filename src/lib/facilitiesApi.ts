@@ -150,10 +150,6 @@ export async function findDuplicateFacility(
 }
 
 export async function createFacility(draft: FacilityDraft): Promise<Facility> {
-  if (draft.target_service_ids.length === 0) {
-    throw new Error('営業対象サービスを1つ以上選択してください。')
-  }
-
   const duplicate = await findDuplicateFacility(draft)
   if (duplicate) {
     const label =
@@ -207,9 +203,14 @@ export async function createFacility(draft: FacilityDraft): Promise<Facility> {
   }
 
   const facilityId = (inserted as FacilityRow).id
+  const allServices = await fetchServices()
+  const serviceIds =
+    draft.target_service_ids.length > 0
+      ? draft.target_service_ids
+      : allServices.filter((service) => service.is_active).map((service) => service.id)
 
   const { error: linkError } = await supabase.from('facility_target_services').insert(
-    draft.target_service_ids.map((serviceId) => ({
+    serviceIds.map((serviceId) => ({
       facility_id: facilityId,
       service_id: serviceId,
     })),
@@ -282,17 +283,12 @@ export type FacilityUpdateInput = {
   phone: string
   city: string
   address: string
-  target_service_ids: string[]
 }
 
 export async function updateFacility(
   facilityId: string,
   input: FacilityUpdateInput,
 ): Promise<Facility> {
-  if (input.target_service_ids.length === 0) {
-    throw new Error('営業対象サービスを1つ以上選択してください。')
-  }
-
   const supabase = getSupabase()
   const { error: updateError } = await supabase
     .from('facilities')
@@ -306,20 +302,6 @@ export async function updateFacility(
     .eq('id', facilityId)
 
   if (updateError) throw updateError
-
-  const { error: deleteError } = await supabase
-    .from('facility_target_services')
-    .delete()
-    .eq('facility_id', facilityId)
-  if (deleteError) throw deleteError
-
-  const { error: linkError } = await supabase.from('facility_target_services').insert(
-    input.target_service_ids.map((serviceId) => ({
-      facility_id: facilityId,
-      service_id: serviceId,
-    })),
-  )
-  if (linkError) throw linkError
 
   return fetchFacilityById(facilityId)
 }
