@@ -326,8 +326,6 @@ export function MapPage() {
               <dl className={styles.meta}>
                 <dt>住所</dt>
                 <dd>{selectedFacility.address}</dd>
-                <dt>市区町村</dt>
-                <dd>{selectedFacility.city}</dd>
                 <dt>電話</dt>
                 <dd>{selectedFacility.phone || '未登録'}</dd>
                 <dt>位置</dt>

@@ -29,7 +29,6 @@ export function FacilityForm({
   const [sharedMemo, setSharedMemo] = useState('')
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
-  const [city, setCity] = useState('')
   const [phone, setPhone] = useState('')
   const [lat, setLat] = useState('')
   const [lng, setLng] = useState('')
@@ -50,11 +49,7 @@ export function FacilityForm({
     if (query.length < 8) return
 
     const timer = window.setTimeout(() => {
-      void onAddressGeocode(query).then((result) => {
-        if (result?.city) {
-          setCity((prev) => prev.trim() || result.city)
-        }
-      })
+      void onAddressGeocode(query)
     }, 700)
     return () => window.clearTimeout(timer)
   }, [address, mode, onAddressGeocode])
@@ -64,7 +59,6 @@ export function FacilityForm({
     setFacilityType('home_care_support')
     setName('')
     setAddress('')
-    setCity('')
     setPhone('')
     setLat('')
     setLng('')
@@ -109,7 +103,7 @@ export function FacilityForm({
           name,
           facility_type: facilityType,
           address,
-          city: city.trim() || cityFromAddressText(address) || '未設定',
+          city: cityFromAddressText(address) || '未設定',
           phone,
           lat: latNum,
           lng: lngNum,
@@ -159,21 +153,8 @@ export function FacilityForm({
             <input
               className={styles.input}
               value={address}
-              onChange={(e) => {
-                const next = e.target.value
-                setAddress(next)
-                if (!city) setCity(cityFromAddressText(next))
-              }}
+              onChange={(e) => setAddress(e.target.value)}
               required
-            />
-          </label>
-          <label className={styles.label}>
-            市区町村
-            <input
-              className={styles.input}
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="住所から自動推定（修正可）"
             />
           </label>
           <label className={styles.label}>

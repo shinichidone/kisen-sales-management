@@ -8,6 +8,7 @@ import {
   fetchFacilityAffiliations,
   updateContact,
 } from '../../lib/contactsApi'
+import { cityFromAddressText } from '../../lib/city'
 import { getErrorMessage } from '../../lib/errors'
 import { geocodeAddress } from '../../lib/geocode'
 import {
@@ -150,7 +151,6 @@ export function FacilityDetail({
   const [name, setName] = useState('')
   const [facilityType, setFacilityType] = useState<FacilityType>('home_care_support')
   const [phone, setPhone] = useState('')
-  const [city, setCity] = useState('')
   const [address, setAddress] = useState('')
   const [lat, setLat] = useState(0)
   const [lng, setLng] = useState(0)
@@ -193,7 +193,6 @@ export function FacilityDetail({
       setName(nextFacility.name)
       setFacilityType(nextFacility.facility_type)
       setPhone(nextFacility.phone ?? '')
-      setCity(nextFacility.city)
       setAddress(nextFacility.address)
       setLat(nextFacility.lat)
       setLng(nextFacility.lng)
@@ -255,7 +254,7 @@ export function FacilityDetail({
         name,
         facility_type: facilityType,
         phone,
-        city,
+        city: cityFromAddressText(address) || facility?.city || '未設定',
         address,
         lat,
         lng,
@@ -547,15 +546,6 @@ export function FacilityDetail({
                 />
               </label>
               <label className={styles.label}>
-                市区町村
-                <input
-                  className={styles.input}
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  required
-                />
-              </label>
-              <label className={styles.label}>
                 電話番号
                 <input
                   className={styles.input}
@@ -596,7 +586,6 @@ export function FacilityDetail({
                           }
                           setLat(result.lat)
                           setLng(result.lng)
-                          if (result.city) setCity(result.city)
                           setMessage('住所の位置にピンを合わせました。ずれていればドラッグで微調整してください。')
                         } catch (err) {
                           console.error('住所からの位置特定に失敗しました:', err)
