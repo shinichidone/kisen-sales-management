@@ -283,6 +283,8 @@ export type FacilityUpdateInput = {
   phone: string
   city: string
   address: string
+  lat: number
+  lng: number
 }
 
 export async function updateFacility(
@@ -298,6 +300,8 @@ export async function updateFacility(
       phone: input.phone.trim() || null,
       city: input.city.trim(),
       address: input.address.trim(),
+      lat: input.lat,
+      lng: input.lng,
     })
     .eq('id', facilityId)
 

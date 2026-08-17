@@ -9,6 +9,7 @@ import {
   updateContact,
 } from '../../lib/contactsApi'
 import { getErrorMessage } from '../../lib/errors'
+import { geocodeAddress } from '../../lib/geocode'
 import {
   fetchFacilityById,
   fetchFacilityMemoHistories,
@@ -56,6 +57,7 @@ import {
   type SalesVisitDraft,
   type SalesVisitResult,
 } from '../../types/salesVisit'
+import { FacilityLocationEditor } from './FacilityLocationEditor'
 import styles from './FacilityDetail.module.css'
 
 type Tab = 'overview' | 'contacts' | 'visits' | 'referrals' | 'memo'
@@ -150,6 +152,9 @@ export function FacilityDetail({
   const [phone, setPhone] = useState('')
   const [city, setCity] = useState('')
   const [address, setAddress] = useState('')
+  const [lat, setLat] = useState(0)
+  const [lng, setLng] = useState(0)
+  const [locating, setLocating] = useState(false)
   const [savingOverview, setSavingOverview] = useState(false)
 
   const [currentContacts, setCurrentContacts] = useState<FacilityAffiliation[]>([])
@@ -190,6 +195,8 @@ export function FacilityDetail({
       setPhone(nextFacility.phone ?? '')
       setCity(nextFacility.city)
       setAddress(nextFacility.address)
+      setLat(nextFacility.lat)
+      setLng(nextFacility.lng)
       setMemo(nextFacility.shared_memo)
       setCurrentContacts(affiliations.current)
       setPastContacts(affiliations.past)
@@ -250,6 +257,8 @@ export function FacilityDetail({
         phone,
         city,
         address,
+        lat,
+        lng,
       })
       setFacility(updated)
       onFacilityUpdated(updated)
@@ -554,9 +563,54 @@ export function FacilityDetail({
                   onChange={(e) => setPhone(e.target.value)}
                 />
               </label>
-              <p className={styles.muted}>
-                位置情報（緯度経度）と Google Place ID はMAP登録時の値を維持します。
-              </p>
+              <div>
+                <p className={styles.sectionTitle}>地図上の位置</p>
+                <p className={styles.muted}>
+                  いまMAPに表示されている位置です。ピンをドラッグ、または地図をタップして修正できます。
+                </p>
+                <FacilityLocationEditor
+                  lat={lat}
+                  lng={lng}
+                  onMove={(position) => {
+                    setLat(position.lat)
+                    setLng(position.lng)
+                  }}
+                />
+                <p className={styles.muted}>
+                  {lat.toFixed(5)}, {lng.toFixed(5)}
+                </p>
+                <div className={styles.actions}>
+                  <button
+                    type="button"
+                    className={styles.secondary}
+                    disabled={locating || !address.trim()}
+                    onClick={() => {
+                      void (async () => {
+                        setLocating(true)
+                        setError(null)
+                        try {
+                          const result = await geocodeAddress(address)
+                          if (!result) {
+                            setError('住所から位置を特定できませんでした。地図上でピンを動かしてください。')
+                            return
+                          }
+                          setLat(result.lat)
+                          setLng(result.lng)
+                          if (result.city) setCity(result.city)
+                          setMessage('住所の位置にピンを合わせました。ずれていればドラッグで微調整してください。')
+                        } catch (err) {
+                          console.error('住所からの位置特定に失敗しました:', err)
+                          setError(getErrorMessage(err, '住所から位置を特定できませんでした。'))
+                        } finally {
+                          setLocating(false)
+                        }
+                      })()
+                    }}
+                  >
+                    {locating ? '位置を検索中…' : '住所から位置を合わせる'}
+                  </button>
+                </div>
+              </div>
               <div className={styles.actions}>
                 <button className={styles.primary} type="submit" disabled={savingOverview}>
                   {savingOverview ? '保存中…' : '概要を保存'}

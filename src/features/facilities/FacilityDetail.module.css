@@ -189,6 +189,14 @@
   color: var(--muted);
 }
 
+.locationMap {
+  height: 220px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e8eef0;
+}
+
 .list {
   display: flex;
   flex-direction: column;
