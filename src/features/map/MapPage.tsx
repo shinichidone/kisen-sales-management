@@ -7,6 +7,7 @@ import {
   fetchFacilities,
   fetchServices,
 } from '../../lib/facilitiesApi'
+import { geocodeAddress } from '../../lib/geocode'
 import { fetchAllReferralCases } from '../../lib/referralsApi'
 import { fetchAllSalesVisits } from '../../lib/salesVisitsApi'
 import type {
@@ -45,7 +46,6 @@ export function MapPage() {
   const [registerMode, setRegisterMode] = useState<RegisterMode>('place')
   const [selectedPlace, setSelectedPlace] = useState<PlaceCandidate | null>(null)
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null)
-  const [mapPickMode, setMapPickMode] = useState(false)
   const [pickedLatLng, setPickedLatLng] = useState<{ lat: number; lng: number } | null>(
     null,
   )
@@ -141,7 +141,6 @@ export function MapPage() {
       setSelectedFacilityId(created.id)
       setSelectedPlace(null)
       setPickedLatLng(null)
-      setMapPickMode(false)
       setMapCenter({ lat: created.lat, lng: created.lng })
       setMessage(`「${created.name}」を保存しました。`)
     },
@@ -157,6 +156,31 @@ export function MapPage() {
   const handleOpenDetail = useCallback((id: string) => {
     setDetailFacilityId(id)
     setDetailInitialTab('visits')
+  }, [])
+
+  const handleOpenFacilityFromList = useCallback((id: string, lat: number, lng: number) => {
+    setSelectedFacilityId(id)
+    setMapCenter({ lat, lng })
+    setDetailFacilityId(id)
+    setDetailInitialTab('overview')
+  }, [])
+
+  const handleAddressGeocode = useCallback(async (address: string) => {
+    try {
+      const result = await geocodeAddress(address)
+      if (!result) {
+        setMessage('住所から位置を特定できませんでした。地図をタップして位置を指定してください。')
+        return null
+      }
+      setPickedLatLng({ lat: result.lat, lng: result.lng })
+      setMapCenter({ lat: result.lat, lng: result.lng })
+      setMessage('住所の位置にオレンジのピンを置きました。指でドラッグして微調整できます。')
+      return result
+    } catch (err) {
+      console.error('住所の位置特定に失敗しました:', err)
+      setMessage('住所から位置を特定できませんでした。地図をタップして位置を指定してください。')
+      return null
+    }
   }, [])
 
   const handleLocate = useCallback(() => {
@@ -203,7 +227,6 @@ export function MapPage() {
               className={registerMode === 'place' ? styles.tabActive : styles.tab}
               onClick={() => {
                 setRegisterMode('place')
-                setMapPickMode(false)
               }}
             >
               Maps検索
@@ -230,16 +253,11 @@ export function MapPage() {
             services={services}
             initialPlace={selectedPlace}
             pickedLatLng={pickedLatLng}
-            mapPickMode={mapPickMode}
-            onToggleMapPick={() => {
-              setRegisterMode('manual')
-              setMapPickMode((prev) => !prev)
-            }}
+            onAddressGeocode={handleAddressGeocode}
             onSubmit={handleSave}
             onCancel={() => {
               setSelectedPlace(null)
               setPickedLatLng(null)
-              setMapPickMode(false)
               setMessage(null)
             }}
           />
@@ -264,8 +282,7 @@ export function MapPage() {
                       : styles.listItem
                   }
                   onClick={() => {
-                    setSelectedFacilityId(facility.id)
-                    setMapCenter({ lat: facility.lat, lng: facility.lng })
+                    handleOpenFacilityFromList(facility.id, facility.lat, facility.lng)
                   }}
                 >
                   <strong>{facility.name}</strong>
@@ -287,15 +304,18 @@ export function MapPage() {
           previewPlace={registerMode === 'place' ? selectedPlace : null}
           previewLatLng={registerMode === 'manual' ? pickedLatLng : null}
           currentLocation={currentLocation}
-          mapPickMode={mapPickMode}
+          mapPickMode={registerMode === 'manual'}
           onSelect={handleSelectFacility}
           onOpenDetail={handleOpenDetail}
+          onPreviewMove={(latLng) => {
+            setPickedLatLng(latLng)
+            setMessage('ピンの位置を更新しました。この位置で保存されます。')
+          }}
           onMapClick={(latLng) => {
-            if (!mapPickMode) return
+            if (registerMode !== 'manual') return
             setPickedLatLng(latLng)
             setMapCenter(latLng)
-            setMapPickMode(false)
-            setMessage('地図上の位置をセットしました。オレンジのピンが未保存位置です。')
+            setMessage('地図上の位置をセットしました。オレンジのピンをドラッグして微調整できます。')
           }}
           onLocate={handleLocate}
           onBoundsChanged={handleBoundsChanged}

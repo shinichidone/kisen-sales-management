@@ -14,8 +14,7 @@ type Props = {
   services: Service[]
   initialPlace: PlaceCandidate | null
   pickedLatLng: { lat: number; lng: number } | null
-  mapPickMode: boolean
-  onToggleMapPick: () => void
+  onAddressGeocode: (address: string) => Promise<{ lat: number; lng: number; city: string } | null>
   onSubmit: (draft: FacilityDraft) => Promise<void>
   onCancel: () => void
 }
@@ -25,8 +24,7 @@ export function FacilityForm({
   services,
   initialPlace,
   pickedLatLng,
-  mapPickMode,
-  onToggleMapPick,
+  onAddressGeocode,
   onSubmit,
   onCancel,
 }: Props) {
@@ -49,6 +47,21 @@ export function FacilityForm({
     setLat(String(pickedLatLng.lat))
     setLng(String(pickedLatLng.lng))
   }, [pickedLatLng])
+
+  useEffect(() => {
+    if (mode !== 'manual') return
+    const query = address.trim()
+    if (query.length < 8) return
+
+    const timer = window.setTimeout(() => {
+      void onAddressGeocode(query).then((result) => {
+        if (result?.city) {
+          setCity((prev) => prev.trim() || result.city)
+        }
+      })
+    }, 700)
+    return () => window.clearTimeout(timer)
+  }, [address, mode, onAddressGeocode])
 
   function resetLocal() {
     setSharedMemo('')
@@ -182,34 +195,17 @@ export function FacilityForm({
               onChange={(e) => setPhone(e.target.value)}
             />
           </label>
-          <div className={styles.actions}>
-            <button type="button" className={styles.secondary} onClick={onToggleMapPick}>
-              {mapPickMode ? '地図クリック待機中…' : '地図上で位置を指定'}
-            </button>
-          </div>
-          <div className={styles.actions}>
-            <label className={styles.label} style={{ flex: 1 }}>
-              緯度
-              <input
-                className={styles.input}
-                value={lat}
-                onChange={(e) => setLat(e.target.value)}
-                inputMode="decimal"
-              />
-            </label>
-            <label className={styles.label} style={{ flex: 1 }}>
-              経度
-              <input
-                className={styles.input}
-                value={lng}
-                onChange={(e) => setLng(e.target.value)}
-                inputMode="decimal"
-              />
-            </label>
-          </div>
-          <p className={styles.hint}>
-            Maps検索で見つからない場合はこちら。地図をクリックして位置をセットできます。
-          </p>
+          {pickedLatLng ? (
+            <p className={styles.hint}>
+              地図にオレンジのピンを表示しています。指でドラッグ、または地図をタップして位置を微調整できます。
+              <br />
+              {pickedLatLng.lat.toFixed(5)}, {pickedLatLng.lng.toFixed(5)}
+            </p>
+          ) : (
+            <p className={styles.hint}>
+              住所を入力すると地図にピンが表示されます。見つからない場合は地図をタップして位置を指定してください。
+            </p>
+          )}
         </>
       )}
 

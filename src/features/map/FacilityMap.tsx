@@ -24,6 +24,7 @@ type Props = {
   mapPickMode: boolean
   onSelect: (facilityId: string) => void
   onOpenDetail: (facilityId: string) => void
+  onPreviewMove?: (latLng: google.maps.LatLngLiteral) => void
   onMapClick: (latLng: google.maps.LatLngLiteral) => void
   onLocate: () => void
   onBoundsChanged?: (bounds: MapBiasBounds) => void
@@ -175,6 +176,7 @@ function Markers({
   currentLocation,
   onSelect,
   onOpenDetail,
+  onPreviewMove,
 }: Pick<
   Props,
   | 'facilities'
@@ -185,6 +187,7 @@ function Markers({
   | 'currentLocation'
   | 'onSelect'
   | 'onOpenDetail'
+  | 'onPreviewMove'
 >) {
   const map = useMap()
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null)
@@ -201,6 +204,8 @@ function Markers({
   monthlyStatsRef.current = monthlyStats
   const onOpenDetailRef = useRef(onOpenDetail)
   onOpenDetailRef.current = onOpenDetail
+  const onPreviewMoveRef = useRef(onPreviewMove)
+  onPreviewMoveRef.current = onPreviewMove
 
   // InfoWindowと「詳細を見る」ボタンのクリック中継は一度だけ設定する
   useEffect(() => {
@@ -281,7 +286,7 @@ function Markers({
     })
   }, [map, facilities, monthlyStats, selectedId, onSelect])
 
-  // 未保存位置プレビュー用ピン
+  // 未保存位置プレビュー用ピン（手動登録時はドラッグで微調整できる）
   useEffect(() => {
     if (!map || !window.google?.maps) return
 
@@ -289,16 +294,19 @@ function Markers({
       ? { lat: previewPlace.lat, lng: previewPlace.lng }
       : previewLatLng
 
-    previewMarkerRef.current?.setMap(null)
-    previewMarkerRef.current = null
+    if (!previewPosition) {
+      previewMarkerRef.current?.setMap(null)
+      previewMarkerRef.current = null
+      return
+    }
 
-    if (previewPosition) {
-      previewMarkerRef.current = new google.maps.Marker({
+    const draggable = !previewPlace && Boolean(previewLatLng)
+    let marker = previewMarkerRef.current
+    if (!marker) {
+      marker = new google.maps.Marker({
         map,
         position: previewPosition,
-        title: previewPlace?.name ?? '選択中の位置（未保存）',
         zIndex: 30,
-        animation: google.maps.Animation.DROP,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 12,
@@ -308,12 +316,20 @@ function Markers({
           strokeWeight: 2,
         },
       })
+      marker.addListener('dragend', () => {
+        const position = marker?.getPosition()
+        if (!position) return
+        onPreviewMoveRef.current?.({ lat: position.lat(), lng: position.lng() })
+      })
+      previewMarkerRef.current = marker
+    } else {
+      marker.setPosition(previewPosition)
     }
 
-    return () => {
-      previewMarkerRef.current?.setMap(null)
-      previewMarkerRef.current = null
-    }
+    marker.setTitle(
+      previewPlace?.name ?? (draggable ? 'ドラッグして位置を微調整' : '選択中の位置（未保存）'),
+    )
+    marker.setDraggable(draggable)
   }, [map, previewPlace, previewLatLng])
 
   // 現在地ピン
@@ -353,6 +369,8 @@ function Markers({
         marker.setMap(null)
       }
       markersRef.current.clear()
+      previewMarkerRef.current?.setMap(null)
+      previewMarkerRef.current = null
     }
   }, [])
 
@@ -371,6 +389,7 @@ export function FacilityMap({
   mapPickMode,
   onSelect,
   onOpenDetail,
+  onPreviewMove,
   onMapClick,
   onLocate,
   onBoundsChanged,
@@ -407,12 +426,13 @@ export function FacilityMap({
             currentLocation={currentLocation}
             onSelect={onSelect}
             onOpenDetail={onOpenDetail}
+            onPreviewMove={onPreviewMove}
           />
         </GoogleMap>
       </div>
       {(previewPlace || previewLatLng) && (
         <div className={styles.mapBanner}>
-          オレンジのピンは未保存です。左のフォームで保存すると青緑のピンとして残ります。
+          オレンジのピンは未保存です。指でドラッグして位置を微調整し、フォームで保存してください。
         </div>
       )}
       <button type="button" className={styles.locateBtn} onClick={onLocate}>
