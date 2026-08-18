@@ -1,23 +1,30 @@
 :root {
-  --bg: #f5f8f7;
+  --bg: #f5f6f8;
   --surface: #ffffff;
-  --ink: #1a2e2a;
-  --ink-soft: #3d554f;
-  --muted: #6b807a;
-  --line: #d5e5e0;
-  --accent: #0f766e;
-  --accent-soft: #14b8a6;
-  --accent-pale: #ccfbf1;
-  --accent-deep: #115e59;
+  --ink: #1c2430;
+  --ink-soft: #3d4a5c;
+  --muted: #6b7380;
+  --line: #e4e7ec;
+  --accent: #0f9c96;
+  --accent-soft: #2bb8b1;
+  --accent-pale: #e6f7f6;
+  --accent-deep: #0b6e6a;
+  --activity: #0f7ea8;
+  --activity-soft: #e8f4f9;
+  --referral: #d97706;
+  --referral-soft: #fff6e8;
   --danger: #b91c1c;
   --danger-pale: #fef2f2;
   --warn-pale: #fffbeb;
   --warn: #b45309;
-  --shadow: 0 8px 24px rgba(15, 118, 110, 0.08);
+  --shadow: 0 2px 8px rgba(28, 36, 48, 0.05);
   --radius: 14px;
+  --space-page: 1rem;
+  --space-section: 1.35rem;
+  --space-card: 0.75rem;
   --font: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", sans-serif;
   --header-h: 56px;
-  --bottom-nav-h: 62px;
+  --bottom-nav-h: 72px;
 }
 
 *,
@@ -38,6 +45,7 @@ body {
   color: var(--ink);
   background: var(--bg);
   line-height: 1.6;
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
 }
 

@@ -1,14 +1,14 @@
+import { Compass, MapPin, Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AppView } from '../../components/layout/AppShell'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useAuth } from '../../contexts/AuthContext'
+import { APP_NAME } from '../../lib/brand'
 import { getErrorMessage } from '../../lib/errors'
+import { fetchServices } from '../../lib/facilitiesApi'
 import { fetchAllReferralCases, type ReferralCaseSummary } from '../../lib/referralsApi'
-import {
-  fetchAllSalesVisits,
-  fetchFollowUps,
-  type SalesVisitSummary,
-} from '../../lib/salesVisitsApi'
+import { fetchAllSalesVisits, type SalesVisitSummary } from '../../lib/salesVisitsApi'
+import type { Service } from '../../types/facility'
 import styles from './HomePage.module.css'
 
 type QuickEntryKind = 'browse' | 'visit' | 'referral'
@@ -26,22 +26,35 @@ function toJstDateString(iso: string): string {
   return new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
 }
 
-function categorizeFollowUp(dateStr: string, today: string): 'overdue' | 'today' | 'next7' | null {
-  if (dateStr < today) return 'overdue'
-  if (dateStr === today) return 'today'
-  const diffDays = Math.round(
-    (new Date(`${dateStr}T00:00:00+09:00`).getTime() -
-      new Date(`${today}T00:00:00+09:00`).getTime()) /
-      86_400_000,
-  )
-  return diffDays <= 7 ? 'next7' : null
+function greetingLabel(): string {
+  const hour =
+    Number(
+      new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo', hour: 'numeric', hour12: false }),
+    ) % 24
+  if (hour < 5) return 'こんばんは'
+  if (hour < 11) return 'おはよう'
+  if (hour < 18) return 'こんにちは'
+  return 'こんばんは'
+}
+
+function displayNameWithSan(name: string): string {
+  const trimmed = name.trim()
+  if (!trimmed) return 'さん'
+  return /さん$/.test(trimmed) ? trimmed : `${trimmed}さん`
+}
+
+function serviceShortName(service: Service): string {
+  if (service.code === 'shoeicho') return '昭栄町'
+  if (service.code === 'minami-hanadai') return '南花台'
+  if (service.code === 'houmon-kango') return '訪問看護'
+  return service.name
 }
 
 export function HomePage({ onNavigate, onQuickEntry }: Props) {
   const { appUser } = useAuth()
+  const [services, setServices] = useState<Service[]>([])
   const [visits, setVisits] = useState<SalesVisitSummary[]>([])
   const [referrals, setReferrals] = useState<ReferralCaseSummary[]>([])
-  const [followUpDates, setFollowUpDates] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -49,17 +62,17 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const [nextVisits, nextReferrals, followUps] = await Promise.all([
+      const [nextServices, nextVisits, nextReferrals] = await Promise.all([
+        fetchServices(),
         fetchAllSalesVisits(),
         fetchAllReferralCases(),
-        fetchFollowUps(),
       ])
+      setServices(nextServices)
       setVisits(nextVisits)
       setReferrals(nextReferrals)
-      setFollowUpDates(followUps.map((item) => item.next_follow_up_on))
     } catch (err) {
-      console.error('ホームダッシュボードの読み込みに失敗しました:', err)
-      setError(getErrorMessage(err, 'ダッシュボードの読み込みに失敗しました。'))
+      console.error('ホームの読み込みに失敗しました:', err)
+      setError(getErrorMessage(err, 'ホームの読み込みに失敗しました。'))
     } finally {
       setLoading(false)
     }
@@ -73,41 +86,54 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
   const monthPrefix = useMemo(() => today.slice(0, 7), [today])
 
   const monthVisits = useMemo(
-    () => visits.filter((v) => toJstDateString(v.visited_at).startsWith(monthPrefix)),
+    () => visits.filter((visit) => toJstDateString(visit.visited_at).startsWith(monthPrefix)),
     [visits, monthPrefix],
   )
   const monthReferrals = useMemo(
-    () => referrals.filter((r) => r.referred_on.startsWith(monthPrefix)),
+    () => referrals.filter((referral) => referral.referred_on.startsWith(monthPrefix)),
     [referrals, monthPrefix],
   )
 
   const overallVisitCount = monthVisits.length
-  const overallMetCount = monthVisits.filter((v) => v.result === 'met').length
+  const overallMetCount = monthVisits.filter((visit) => visit.result === 'met').length
   const overallReferralCount = monthReferrals.length
-  const overallStartedCount = monthReferrals.filter((r) => r.status === 'started').length
 
   const myVisits = useMemo(
-    () => (appUser ? monthVisits.filter((v) => v.created_by === appUser.id) : []),
+    () => (appUser ? monthVisits.filter((visit) => visit.created_by === appUser.id) : []),
     [monthVisits, appUser],
   )
   const myVisitCount = myVisits.length
-  const myMetCount = myVisits.filter((v) => v.result === 'met').length
+  const myMetCount = myVisits.filter((visit) => visit.result === 'met').length
 
-  const followUpCounts = useMemo(() => {
-    const counts = { overdue: 0, today: 0, next7: 0 }
-    for (const date of followUpDates) {
-      const category = categorizeFollowUp(date, today)
-      if (category) counts[category] += 1
-    }
-    return counts
-  }, [followUpDates, today])
+  const serviceRows = useMemo(
+    () =>
+      services.map((service) => ({
+        id: service.id,
+        name: serviceShortName(service),
+        metCount: monthVisits.filter(
+          (visit) => visit.result === 'met' && visit.service_ids.includes(service.id),
+        ).length,
+        referralCount: monthReferrals.filter((referral) => referral.service_id === service.id)
+          .length,
+      })),
+    [services, monthVisits, monthReferrals],
+  )
+
+  const givenName = displayNameWithSan(appUser?.display_name ?? '')
+  const isAdmin = appUser?.role === 'system_admin'
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>ようこそ、{appUser?.display_name ?? ''}さん</h1>
-        <p className={styles.muted}>今月の営業活動の状況とフォロー予定を確認できます。</p>
-      </div>
+      <header className={styles.hero}>
+        <div className={styles.brandRow}>
+          <Compass size={22} strokeWidth={1.8} className={styles.brandMark} />
+          <p className={styles.brand}>{APP_NAME}</p>
+        </div>
+        <h1 className={styles.greeting}>
+          {greetingLabel()}、{givenName}
+        </h1>
+        <p className={styles.lead}>今月の営業状況を確認しましょう</p>
+      </header>
 
       {loading ? <LoadingSpinner /> : null}
       {error ? <div className={styles.alert}>{error}</div> : null}
@@ -115,73 +141,76 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
       {!loading ? (
         <>
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>会社全体（今月）</h2>
-            <div className={styles.statGrid}>
-              <div className={styles.statCard}>
-                <span className={styles.statValue}>{overallVisitCount}</span>
-                <span className={styles.statLabel}>訪問数</span>
+            <h2 className={styles.sectionTitle}>会社全体｜今月</h2>
+            <div className={styles.companyGrid}>
+              <div className={styles.activityCard}>
+                <p className={styles.cardEyebrow}>活動</p>
+                <div className={styles.splitKpi}>
+                  <div>
+                    <span className={styles.kpiValueActivity}>{overallVisitCount}</span>
+                    <span className={styles.kpiLabel}>訪問</span>
+                  </div>
+                  <div>
+                    <span className={styles.kpiValueActivity}>{overallMetCount}</span>
+                    <span className={styles.kpiLabel}>面会</span>
+                  </div>
+                </div>
               </div>
-              <div className={styles.statCard}>
-                <span className={styles.statValue}>{overallMetCount}</span>
-                <span className={styles.statLabel}>面会数</span>
-              </div>
-              <div className={styles.statCard}>
-                <span className={styles.statValue}>{overallReferralCount}</span>
-                <span className={styles.statLabel}>紹介数</span>
-              </div>
-              <div className={styles.statCard}>
-                <span className={styles.statValue}>{overallStartedCount}</span>
-                <span className={styles.statLabel}>利用開始数</span>
-              </div>
-            </div>
-          </section>
-
-          <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>あなたの成績（今月）</h2>
-            <div className={styles.statGrid}>
-              <div className={styles.statCard}>
-                <span className={styles.statValue}>{myVisitCount}</span>
-                <span className={styles.statLabel}>訪問数</span>
-              </div>
-              <div className={styles.statCard}>
-                <span className={styles.statValue}>{myMetCount}</span>
-                <span className={styles.statLabel}>面会数</span>
+              <div className={styles.referralCard}>
+                <p className={styles.cardEyebrowReferral}>紹介</p>
+                <div className={styles.singleKpi}>
+                  <span className={styles.kpiValueReferral}>{overallReferralCount}</span>
+                  <span className={styles.kpiLabel}>紹介件数</span>
+                </div>
               </div>
             </div>
           </section>
 
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>フォロー予定</h2>
-            <div className={styles.followRow}>
-              <button type="button" className={styles.followCard} onClick={() => onNavigate('followups')}>
-                <span className={styles.followCountWarn}>{followUpCounts.overdue}</span>
-                <span>期限超過</span>
-              </button>
-              <button type="button" className={styles.followCard} onClick={() => onNavigate('followups')}>
-                <span className={styles.followCount}>{followUpCounts.today}</span>
-                <span>今日</span>
-              </button>
-              <button type="button" className={styles.followCard} onClick={() => onNavigate('followups')}>
-                <span className={styles.followCount}>{followUpCounts.next7}</span>
-                <span>今後7日</span>
-              </button>
+            <h2 className={styles.sectionTitle}>サービス別営業活動</h2>
+            <div className={styles.serviceList}>
+              {serviceRows.map((row) => (
+                <div key={row.id} className={styles.serviceRow}>
+                  <p className={styles.serviceName}>{row.name}</p>
+                  <p className={styles.serviceMetrics}>
+                    面会 <strong>{row.metCount}</strong>
+                    <span className={styles.dot}>｜</span>
+                    紹介 <strong className={styles.referralNum}>{row.referralCount}</strong>
+                  </p>
+                </div>
+              ))}
             </div>
           </section>
 
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>ショートカット</h2>
-            <div className={styles.actions}>
-              <button type="button" className={styles.primary} onClick={() => onQuickEntry('browse')}>
-                近くの営業先を探す
-              </button>
-              <button type="button" className={styles.primary} onClick={() => onQuickEntry('visit')}>
-                営業記録を登録
-              </button>
-              <button type="button" className={styles.secondary} onClick={() => onNavigate('map')}>
-                営業MAPを開く
-              </button>
+            <h2 className={styles.sectionTitle}>あなた｜今月</h2>
+            <div className={styles.youCard}>
+              <span>
+                訪問 <strong>{myVisitCount}</strong>
+              </span>
+              <span className={styles.dot}>｜</span>
+              <span>
+                面会 <strong>{myMetCount}</strong>
+              </span>
             </div>
           </section>
+
+          <section className={styles.ctaSection}>
+            <button type="button" className={styles.cta} onClick={() => onQuickEntry('visit')}>
+              <Plus size={22} strokeWidth={2.2} />
+              営業記録を登録
+            </button>
+            <button type="button" className={styles.subLink} onClick={() => onNavigate('map')}>
+              <MapPin size={16} strokeWidth={1.8} />
+              近くの営業先を見る
+            </button>
+          </section>
+
+          {isAdmin ? (
+            <button type="button" className={styles.adminLink} onClick={() => onNavigate('users')}>
+              ユーザー管理
+            </button>
+          ) : null}
         </>
       ) : null}
     </div>

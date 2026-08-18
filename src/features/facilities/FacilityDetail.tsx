@@ -879,44 +879,6 @@ export function FacilityDetail({
                 <p className={styles.muted}>
                   登録者: {editingVisitId ? '（元の登録者を維持します）' : (appUser?.display_name ?? '不明なユーザー')}
                 </p>
-                <p className={styles.sectionTitle}>次回フォロー（任意）</p>
-                <label className={styles.label}>
-                  次回フォロー予定日
-                  <input
-                    type="date"
-                    className={styles.input}
-                    value={visitDraft.next_follow_up_on}
-                    onChange={(e) =>
-                      setVisitDraft((prev) => ({
-                        ...prev,
-                        next_follow_up_on: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className={styles.label}>
-                  フォロー担当社員
-                  <input
-                    className={styles.input}
-                    value={visitDraft.follow_up_assignee}
-                    onChange={(e) =>
-                      setVisitDraft((prev) => ({
-                        ...prev,
-                        follow_up_assignee: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className={styles.label}>
-                  フォロー内容
-                  <textarea
-                    className={styles.textarea}
-                    value={visitDraft.follow_up_note}
-                    onChange={(e) =>
-                      setVisitDraft((prev) => ({ ...prev, follow_up_note: e.target.value }))
-                    }
-                  />
-                </label>
                 <div className={styles.actions}>
                   <button className={styles.primary} type="submit" disabled={savingVisit}>
                     {savingVisit ? '保存中…' : editingVisitId ? '営業履歴を更新' : '営業履歴を登録'}
@@ -959,13 +921,6 @@ export function FacilityDetail({
                           </span>
                         ) : null}
                         {visit.memo ? <span>メモ: {visit.memo}</span> : null}
-                        {visit.next_follow_up_on ? (
-                          <span>
-                            次回フォロー: {visit.next_follow_up_on}
-                            {visit.follow_up_assignee ? `（${visit.follow_up_assignee}）` : ''}
-                            {visit.follow_up_note ? ` - ${visit.follow_up_note}` : ''}
-                          </span>
-                        ) : null}
                         <span>登録: {visit.registered_by}</span>
                         {canEditVisit(visit, appUser) ? (
                           <div className={styles.cardActions}>

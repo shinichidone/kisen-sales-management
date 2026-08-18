@@ -91,16 +91,31 @@ export type SalesVisitSummary = {
   visited_at: string
   result: SalesVisitResult
   created_by: string | null
+  service_ids: string[]
 }
 
 /** 営業分析一覧（STEP6）・ホーム（STEP7）用に、全施設分の営業履歴を軽量な形で取得する */
 export async function fetchAllSalesVisits(): Promise<SalesVisitSummary[]> {
   const { data, error } = await getSupabase()
     .from('sales_visits')
-    .select('facility_id, visited_at, result, created_by')
+    .select('facility_id, visited_at, result, created_by, sales_visit_services ( service_id )')
 
   if (error) throw error
-  return (data ?? []) as SalesVisitSummary[]
+  return (
+    (data ?? []) as {
+      facility_id: string
+      visited_at: string
+      result: SalesVisitResult
+      created_by: string | null
+      sales_visit_services?: { service_id: string }[] | null
+    }[]
+  ).map((row) => ({
+    facility_id: row.facility_id,
+    visited_at: row.visited_at,
+    result: row.result,
+    created_by: row.created_by,
+    service_ids: (row.sales_visit_services ?? []).map((item) => item.service_id),
+  }))
 }
 
 export async function fetchFacilitySalesVisits(facilityId: string): Promise<SalesVisit[]> {
@@ -168,70 +183,6 @@ export async function createSalesVisit(
 
   if (fetchError) throw fetchError
   return mapSalesVisit(full as unknown as SalesVisitRow)
-}
-
-export type FollowUpItem = {
-  visit_id: string
-  facility_id: string
-  facility_name: string
-  visited_at: string
-  next_follow_up_on: string
-  follow_up_note: string
-  follow_up_assignee: string
-}
-
-type FollowUpRow = {
-  id: string
-  facility_id: string
-  visited_at: string
-  next_follow_up_on: string
-  follow_up_note: string
-  follow_up_assignee: string
-  facilities: { name: string } | { name: string }[] | null
-}
-
-/** 次回フォロー予定が設定されている営業履歴を、予定日が近い順に取得する */
-export async function fetchFollowUps(): Promise<FollowUpItem[]> {
-  const { data, error } = await getSupabase()
-    .from('sales_visits')
-    .select(
-      `
-      id,
-      facility_id,
-      visited_at,
-      next_follow_up_on,
-      follow_up_note,
-      follow_up_assignee,
-      facilities ( name )
-    `,
-    )
-    .not('next_follow_up_on', 'is', null)
-    .order('next_follow_up_on', { ascending: true })
-
-  if (error) throw error
-
-  return ((data ?? []) as unknown as FollowUpRow[]).map((row) => {
-    const facility = Array.isArray(row.facilities) ? row.facilities[0] : row.facilities
-    return {
-      visit_id: row.id,
-      facility_id: row.facility_id,
-      facility_name: facility?.name ?? '（不明な施設）',
-      visited_at: row.visited_at,
-      next_follow_up_on: row.next_follow_up_on,
-      follow_up_note: row.follow_up_note,
-      follow_up_assignee: row.follow_up_assignee,
-    }
-  })
-}
-
-/** フォロー対応済みにする（次回フォロー予定を解除） */
-export async function completeFollowUp(visitId: string): Promise<void> {
-  const { error } = await getSupabase()
-    .from('sales_visits')
-    .update({ next_follow_up_on: null })
-    .eq('id', visitId)
-
-  if (error) throw error
 }
 
 export async function updateSalesVisit(
