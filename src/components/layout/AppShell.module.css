@@ -117,7 +117,7 @@
   }
 
   .main {
-    padding-bottom: var(--bottom-nav-h);
+    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 12px);
   }
 
   .mobileSignOutBtn {
@@ -142,11 +142,12 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: var(--bottom-nav-h);
+    min-height: var(--bottom-nav-h);
+    height: auto;
     background: rgba(255, 255, 255, 0.98);
     border-top: 1px solid var(--line);
     z-index: 30;
-    padding: 0.2rem 0.25rem env(safe-area-inset-bottom);
+    padding: 0.4rem 0.25rem calc(env(safe-area-inset-bottom, 0px) + 14px);
   }
 
   .mobileNavItem,
@@ -162,8 +163,8 @@
     color: var(--muted);
     font-size: 0.68rem;
     font-weight: 700;
-    padding: 0.35rem 0 0.45rem;
-    min-height: 56px;
+    padding: 0.25rem 0 0.15rem;
+    min-height: 52px;
   }
 
   .mobileNavItemActive {
