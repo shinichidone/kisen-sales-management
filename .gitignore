@@ -17,6 +17,10 @@ dist-ssr
 .env.*
 !.env.example
 
+# 一括登録の一時成果物（APIキー入りHTML・生結果）
+public/kawachinagano-geocode.html
+scripts/output/
+
 # Editor
 .vscode/*
 !.vscode/extensions.json
