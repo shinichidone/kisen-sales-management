@@ -69,21 +69,28 @@ export type ReferralCaseSummary = {
   facility_id: string
   referred_on: string
   status: ReferralStatus
+  service_id: string
 }
 
-/** 営業分析一覧（STEP6）用に、全施設分の紹介案件を軽量な形で取得する */
+/** 営業分析一覧（STEP6）・ホーム用に、全施設分の紹介案件を軽量な形で取得する */
 export async function fetchAllReferralCases(): Promise<ReferralCaseSummary[]> {
   const { data, error } = await getSupabase()
     .from('referral_cases')
-    .select('source_facility_id, referred_on, status')
+    .select('source_facility_id, referred_on, status, service_id')
 
   if (error) throw error
   return (
-    (data ?? []) as { source_facility_id: string; referred_on: string; status: ReferralStatus }[]
+    (data ?? []) as {
+      source_facility_id: string
+      referred_on: string
+      status: ReferralStatus
+      service_id: string
+    }[]
   ).map((row) => ({
     facility_id: row.source_facility_id,
     referred_on: row.referred_on,
     status: row.status,
+    service_id: row.service_id,
   }))
 }
 

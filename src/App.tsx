@@ -8,7 +8,6 @@ import { AnalyticsPage } from './features/analytics/AnalyticsPage'
 import { LoginPage } from './features/auth/LoginPage'
 import { PendingApprovalPage } from './features/auth/PendingApprovalPage'
 import { FacilityDetail, type FacilityDetailTab } from './features/facilities/FacilityDetail'
-import { FollowUpsPage } from './features/followups/FollowUpsPage'
 import { HomePage } from './features/home/HomePage'
 import { MapPage } from './features/map/MapPage'
 import { FacilityPicker } from './features/quickEntry/FacilityPicker'
@@ -57,8 +56,6 @@ function AuthenticatedApp() {
           <HomePage onNavigate={setView} onQuickEntry={startQuickEntry} />
         ) : view === 'map' ? (
           <MapPage />
-        ) : view === 'followups' ? (
-          <FollowUpsPage />
         ) : view === 'users' ? (
           <UsersPage />
         ) : (

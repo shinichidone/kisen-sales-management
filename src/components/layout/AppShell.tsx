@@ -1,8 +1,10 @@
+import { BarChart3, Handshake, Home, MapPin, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { APP_NAME, APP_NAME_JA } from '../../lib/brand'
 import type { AppUser } from '../../types/appUser'
 import styles from './AppShell.module.css'
 
-export type AppView = 'home' | 'map' | 'followups' | 'analytics' | 'users'
+export type AppView = 'home' | 'map' | 'analytics' | 'users'
 
 type Props = {
   children: ReactNode
@@ -16,16 +18,8 @@ type Props = {
 const NAV_ITEMS: { view: AppView; label: string; adminOnly?: boolean }[] = [
   { view: 'home', label: 'ホーム' },
   { view: 'map', label: 'MAP' },
-  { view: 'followups', label: 'フォロー管理' },
   { view: 'analytics', label: '分析' },
   { view: 'users', label: 'ユーザー管理', adminOnly: true },
-]
-
-const MOBILE_NAV_ITEMS: { view: AppView; label: string; icon: string }[] = [
-  { view: 'home', label: 'ホーム', icon: '🏠' },
-  { view: 'map', label: 'MAP', icon: '📍' },
-  { view: 'followups', label: 'フォロー', icon: '⏰' },
-  { view: 'analytics', label: '分析', icon: '📊' },
 ]
 
 export function AppShell({
@@ -42,8 +36,8 @@ export function AppShell({
     <div className={styles.shell}>
       <header className={styles.header}>
         <div className={styles.brand}>
-          <strong>営業活動管理ツール</strong>
-          <span>営業情報を会社のデータ資産へ</span>
+          <strong>{APP_NAME}</strong>
+          <span>{APP_NAME_JA}</span>
         </div>
         <nav className={styles.nav}>
           {NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin).map((item) => (
@@ -56,6 +50,12 @@ export function AppShell({
               {item.label}
             </button>
           ))}
+          <button type="button" className={styles.navItem} onClick={() => onQuickEntry('visit')}>
+            営業記録
+          </button>
+          <button type="button" className={styles.navItem} onClick={() => onQuickEntry('referral')}>
+            紹介案件
+          </button>
         </nav>
         <div className={styles.user}>
           {appUser ? <span className={styles.userName}>{appUser.display_name}</span> : null}
@@ -76,24 +76,32 @@ export function AppShell({
         ログアウト
       </button>
 
-      <nav className={styles.mobileNav}>
-        {MOBILE_NAV_ITEMS.map((item) => (
-          <button
-            key={item.view}
-            type="button"
-            className={activeView === item.view ? styles.mobileNavItemActive : styles.mobileNavItem}
-            onClick={() => onChangeView(item.view)}
-          >
-            <span className={styles.mobileNavIcon}>{item.icon}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
+      <nav className={styles.mobileNav} aria-label="メインメニュー">
         <button
           type="button"
-          className={styles.mobileNavItem}
-          onClick={() => onQuickEntry('visit')}
+          className={activeView === 'home' ? styles.mobileNavItemActive : styles.mobileNavItem}
+          onClick={() => onChangeView('home')}
         >
-          <span className={styles.mobileNavIcon}>📝</span>
+          <Home size={22} strokeWidth={1.8} />
+          <span>ホーム</span>
+        </button>
+        <button
+          type="button"
+          className={activeView === 'map' ? styles.mobileNavItemActive : styles.mobileNavItem}
+          onClick={() => onChangeView('map')}
+        >
+          <MapPin size={22} strokeWidth={1.8} />
+          <span>MAP</span>
+        </button>
+        <button
+          type="button"
+          className={styles.mobileNavCta}
+          onClick={() => onQuickEntry('visit')}
+          aria-label="営業記録を登録"
+        >
+          <span className={styles.mobileNavCtaBtn}>
+            <Plus size={26} strokeWidth={2.2} />
+          </span>
           <span>営業記録</span>
         </button>
         <button
@@ -101,8 +109,16 @@ export function AppShell({
           className={styles.mobileNavItem}
           onClick={() => onQuickEntry('referral')}
         >
-          <span className={styles.mobileNavIcon}>🤝</span>
+          <Handshake size={22} strokeWidth={1.8} />
           <span>紹介案件</span>
+        </button>
+        <button
+          type="button"
+          className={activeView === 'analytics' ? styles.mobileNavItemActive : styles.mobileNavItem}
+          onClick={() => onChangeView('analytics')}
+        >
+          <BarChart3 size={22} strokeWidth={1.8} />
+          <span>分析</span>
         </button>
       </nav>
     </div>

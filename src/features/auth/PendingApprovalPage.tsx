@@ -1,3 +1,4 @@
+import { APP_NAME, APP_NAME_JA } from '../../lib/brand'
 import type { AppUser } from '../../types/appUser'
 import styles from './AuthPages.module.css'
 
@@ -13,8 +14,8 @@ export function PendingApprovalPage({ appUser, onSignOut }: Props) {
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.brand}>
-          <strong>営業活動管理ツール</strong>
-          <span>営業情報を会社のデータ資産へ</span>
+          <strong>{APP_NAME}</strong>
+          <span>{APP_NAME_JA}</span>
         </div>
 
         <div className={isDisabled ? styles.alert : styles.alertWarn}>
