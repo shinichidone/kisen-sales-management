@@ -26,26 +26,79 @@
   color: var(--muted);
 }
 
-.periodTabs {
+.filters {
   display: flex;
-  gap: 0.4rem;
+  flex-direction: column;
+  gap: 0.95rem;
 }
 
-.period,
-.periodActive {
+.filterBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.filterLabel {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--ink);
+  text-align: left;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.chip,
+.chipActive {
   border: 1px solid var(--line);
   background: #fff;
   color: var(--ink-soft);
   border-radius: 999px;
-  padding: 0.4rem 0.9rem;
-  font-size: 0.8rem;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
 }
 
-.periodActive {
+.chipActive {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+}
+
+.monthField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 220px;
+}
+
+.monthCaption {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.monthInput,
+.select {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.select {
+  max-width: 280px;
+}
+
+.resultHint {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
 }
 
 .tableWrap {

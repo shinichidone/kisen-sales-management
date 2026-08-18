@@ -2,13 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { getErrorMessage } from '../../lib/errors'
 import { fetchFacilities, fetchServices } from '../../lib/facilitiesApi'
-import { fetchAllReferralCases } from '../../lib/referralsApi'
-import { fetchAllSalesVisits } from '../../lib/salesVisitsApi'
+import { fetchAllReferralCases, type ReferralCaseSummary } from '../../lib/referralsApi'
+import { fetchAllSalesVisits, type SalesVisitSummary } from '../../lib/salesVisitsApi'
 import { facilityTypeLabel, type Facility, type Service } from '../../types/facility'
 import { FacilityDetail } from '../facilities/FacilityDetail'
 import styles from './AnalyticsPage.module.css'
-
-type Period = 'all' | 'month'
 
 type SortKey =
   | 'name'
@@ -21,6 +19,8 @@ type SortKey =
   | 'startRate'
 
 type SortDir = 'asc' | 'desc'
+
+type SortPreset = 'visits_desc' | 'visits_asc' | 'referrals_desc' | 'referrals_asc'
 
 type Row = {
   facility: Facility
@@ -42,6 +42,22 @@ function todayInJst(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
 }
 
+function currentMonthValue(): string {
+  return todayInJst().slice(0, 7)
+}
+
+function formatMonthLabel(monthValue: string): string {
+  const [year, month] = monthValue.split('-')
+  return `${Number(year)}年${Number(month)}月`
+}
+
+function serviceShortName(service: Service): string {
+  if (service.code === 'shoeicho') return '昭栄町'
+  if (service.code === 'minami-hanadai') return '南花台'
+  if (service.code === 'houmon-kango') return '訪問看護'
+  return service.name
+}
+
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'name', label: '施設名' },
   { key: 'visitCount', label: '訪問数' },
@@ -53,19 +69,24 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'startRate', label: '利用開始率' },
 ]
 
+const SORT_PRESETS: { value: SortPreset; label: string; key: SortKey; dir: SortDir }[] = [
+  { value: 'visits_desc', label: '営業件数が多い順', key: 'visitCount', dir: 'desc' },
+  { value: 'visits_asc', label: '営業件数が少ない順', key: 'visitCount', dir: 'asc' },
+  { value: 'referrals_desc', label: '紹介数が多い順', key: 'referralCount', dir: 'desc' },
+  { value: 'referrals_asc', label: '紹介数が少ない順', key: 'referralCount', dir: 'asc' },
+]
+
 export function AnalyticsPage() {
   const [facilities, setFacilities] = useState<Facility[]>([])
   const [services, setServices] = useState<Service[]>([])
-  const [visits, setVisits] = useState<{ facility_id: string; visited_at: string; result: string }[]>(
-    [],
-  )
-  const [referrals, setReferrals] = useState<
-    { facility_id: string; referred_on: string; status: string }[]
-  >([])
+  const [visits, setVisits] = useState<SalesVisitSummary[]>([])
+  const [referrals, setReferrals] = useState<ReferralCaseSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [period, setPeriod] = useState<Period>('all')
-  const [sortKey, setSortKey] = useState<SortKey>('daysSinceLastVisit')
+  const [serviceId, setServiceId] = useState<string>('all')
+  const [period, setPeriod] = useState<'all' | 'month'>('month')
+  const [monthValue, setMonthValue] = useState(currentMonthValue)
+  const [sortKey, setSortKey] = useState<SortKey>('visitCount')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [detailFacilityId, setDetailFacilityId] = useState<string | null>(null)
 
@@ -96,29 +117,39 @@ export function AnalyticsPage() {
   }, [reload])
 
   const today = useMemo(() => todayInJst(), [])
-  const monthPrefix = useMemo(() => today.slice(0, 7), [today])
+
+  const filteredVisits = useMemo(() => {
+    return visits.filter((visit) => {
+      if (serviceId !== 'all' && !visit.service_ids.includes(serviceId)) return false
+      if (period === 'month' && !toJstDateString(visit.visited_at).startsWith(monthValue)) {
+        return false
+      }
+      return true
+    })
+  }, [visits, serviceId, period, monthValue])
+
+  const filteredReferrals = useMemo(() => {
+    return referrals.filter((referral) => {
+      if (serviceId !== 'all' && referral.service_id !== serviceId) return false
+      if (period === 'month' && !referral.referred_on.startsWith(monthValue)) return false
+      return true
+    })
+  }, [referrals, serviceId, period, monthValue])
 
   const rows = useMemo<Row[]>(() => {
     return facilities.map((facility) => {
-      const facilityVisits = visits.filter((v) => v.facility_id === facility.id)
-      const facilityReferrals = referrals.filter((r) => r.facility_id === facility.id)
+      const facilityVisits = filteredVisits.filter((visit) => visit.facility_id === facility.id)
+      const facilityReferrals = filteredReferrals.filter(
+        (referral) => referral.facility_id === facility.id,
+      )
 
-      const periodVisits =
-        period === 'month'
-          ? facilityVisits.filter((v) => toJstDateString(v.visited_at).startsWith(monthPrefix))
-          : facilityVisits
-      const periodReferrals =
-        period === 'month'
-          ? facilityReferrals.filter((r) => r.referred_on.startsWith(monthPrefix))
-          : facilityReferrals
-
-      const visitCount = periodVisits.length
-      const metCount = periodVisits.filter((v) => v.result === 'met').length
+      const visitCount = facilityVisits.length
+      const metCount = facilityVisits.filter((visit) => visit.result === 'met').length
       const meetRate = visitCount > 0 ? metCount / visitCount : null
 
-      const lastVisitedOn = facilityVisits.reduce<string | null>((latest, v) => {
-        const d = toJstDateString(v.visited_at)
-        return !latest || d > latest ? d : latest
+      const lastVisitedOn = facilityVisits.reduce<string | null>((latest, visit) => {
+        const date = toJstDateString(visit.visited_at)
+        return !latest || date > latest ? date : latest
       }, null)
       const daysSinceLastVisit = lastVisitedOn
         ? Math.round(
@@ -128,8 +159,9 @@ export function AnalyticsPage() {
           )
         : null
 
-      const referralCount = periodReferrals.length
-      const startedCount = periodReferrals.filter((r) => r.status === 'started').length
+      const referralCount = facilityReferrals.length
+      const startedCount = facilityReferrals.filter((referral) => referral.status === 'started')
+        .length
       const startRate = referralCount > 0 ? startedCount / referralCount : null
 
       return {
@@ -144,7 +176,7 @@ export function AnalyticsPage() {
         startRate,
       }
     })
-  }, [facilities, visits, referrals, period, monthPrefix, today])
+  }, [facilities, filteredVisits, filteredReferrals, today])
 
   const sortedRows = useMemo(() => {
     const withValue = (row: Row): number | string => {
@@ -183,44 +215,121 @@ export function AnalyticsPage() {
     return sorted
   }, [rows, sortKey, sortDir])
 
+  const sortPreset = useMemo<SortPreset | ''>(() => {
+    const match = SORT_PRESETS.find((item) => item.key === sortKey && item.dir === sortDir)
+    return match?.value ?? ''
+  }, [sortKey, sortDir])
+
   function handleSort(key: SortKey) {
     if (key === sortKey) {
       setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-    } else {
-      setSortKey(key)
-      setSortDir(key === 'name' ? 'asc' : 'desc')
+      return
     }
+    setSortKey(key)
+    setSortDir(key === 'name' ? 'asc' : 'desc')
+  }
+
+  function handleSortPreset(value: string) {
+    const preset = SORT_PRESETS.find((item) => item.value === value)
+    if (!preset) return
+    setSortKey(preset.key)
+    setSortDir(preset.dir)
   }
 
   function formatRate(rate: number | null): string {
     return rate === null ? '－' : `${Math.round(rate * 100)}%`
   }
 
+  const periodLabel = period === 'all' ? '全期間' : formatMonthLabel(monthValue)
+  const selectedService = services.find((service) => service.id === serviceId)
+  const scopeLabel = selectedService ? ` ／ ${serviceShortName(selectedService)}` : ''
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>営業分析一覧</h1>
         <p className={styles.muted}>
-          営業先ごとの数字を一覧で比較できます。列見出しをクリックすると並び替えできます。
+          事業所と月を指定して、営業件数・紹介数の多い順／少ない順で比較できます。
         </p>
       </div>
 
-      <div className={styles.periodTabs}>
-        <button
-          type="button"
-          className={period === 'all' ? styles.periodActive : styles.period}
-          onClick={() => setPeriod('all')}
-        >
-          全期間
-        </button>
-        <button
-          type="button"
-          className={period === 'month' ? styles.periodActive : styles.period}
-          onClick={() => setPeriod('month')}
-        >
-          今月
-        </button>
-      </div>
+      <section className={styles.filters} aria-label="絞り込み">
+        <div className={styles.filterBlock}>
+          <p className={styles.filterLabel}>事業所</p>
+          <div className={styles.chips}>
+            <button
+              type="button"
+              className={serviceId === 'all' ? styles.chipActive : styles.chip}
+              onClick={() => setServiceId('all')}
+            >
+              すべて
+            </button>
+            {services.map((service) => (
+              <button
+                key={service.id}
+                type="button"
+                className={serviceId === service.id ? styles.chipActive : styles.chip}
+                onClick={() => setServiceId(service.id)}
+              >
+                {serviceShortName(service)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.filterBlock}>
+          <p className={styles.filterLabel}>期間</p>
+          <div className={styles.chips}>
+            <button
+              type="button"
+              className={period === 'all' ? styles.chipActive : styles.chip}
+              onClick={() => setPeriod('all')}
+            >
+              全期間
+            </button>
+            <button
+              type="button"
+              className={period === 'month' ? styles.chipActive : styles.chip}
+              onClick={() => setPeriod('month')}
+            >
+              月を指定
+            </button>
+          </div>
+          {period === 'month' ? (
+            <label className={styles.monthField}>
+              <span className={styles.monthCaption}>対象月</span>
+              <input
+                type="month"
+                className={styles.monthInput}
+                value={monthValue}
+                max={currentMonthValue()}
+                onChange={(event) => setMonthValue(event.target.value)}
+              />
+            </label>
+          ) : null}
+        </div>
+
+        <label className={styles.filterBlock}>
+          <span className={styles.filterLabel}>並び順</span>
+          <select
+            className={styles.select}
+            value={sortPreset}
+            onChange={(event) => handleSortPreset(event.target.value)}
+          >
+            {SORT_PRESETS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+            {sortPreset === '' ? <option value="">その他の並び</option> : null}
+          </select>
+        </label>
+      </section>
+
+      <p className={styles.resultHint}>
+        {periodLabel}
+        {scopeLabel}
+      </p>
 
       {loading ? <LoadingSpinner /> : null}
       {error ? <div className={styles.alert}>{error}</div> : null}
