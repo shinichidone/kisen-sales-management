@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { APP_NAME, APP_NAME_JA } from '../../lib/brand'
 import { getErrorMessage } from '../../lib/errors'
 import { getSupabase } from '../../lib/supabase'
 import styles from './AuthPages.module.css'
@@ -81,8 +82,8 @@ export function LoginPage() {
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.brand}>
-          <strong>営業活動管理ツール</strong>
-          <span>営業情報を会社のデータ資産へ</span>
+          <strong>{APP_NAME}</strong>
+          <span>{APP_NAME_JA}</span>
         </div>
 
         <div className={styles.tabs}>
