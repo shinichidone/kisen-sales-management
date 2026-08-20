@@ -176,3 +176,84 @@
   color: var(--muted);
   padding: 0.6rem 0;
 }
+
+.mobileList {
+  display: none;
+}
+
+.mobileRow {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 1rem 1rem calc(3rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tableWrap {
+    display: none;
+  }
+
+  .mobileList {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .mobileRow {
+    display: grid;
+    grid-template-columns: 3.2rem 1fr;
+    align-items: center;
+    gap: 0.7rem;
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    background: #fff;
+    text-align: left;
+    padding: 0.8rem 0.9rem;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .mobileRow:last-child {
+    border-bottom: none;
+  }
+
+  .mobileVisitCount {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.1rem;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--activity);
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  .mobileVisitLabel {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  .mobileFacility {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+  }
+
+  .mobileName {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--accent-deep);
+    white-space: normal;
+    word-break: break-word;
+  }
+}

@@ -388,6 +388,30 @@ export function AnalyticsPage() {
         </div>
       ) : null}
 
+      {!loading && facilities.length > 0 ? (
+        <div className={styles.mobileList}>
+          {sortedRows.map((row) => (
+            <button
+              key={row.facility.id}
+              type="button"
+              className={styles.mobileRow}
+              onClick={() => setDetailFacilityId(row.facility.id)}
+            >
+              <span className={styles.mobileVisitCount}>
+                {row.visitCount}
+                <span className={styles.mobileVisitLabel}>訪問</span>
+              </span>
+              <span className={styles.mobileFacility}>
+                <span className={styles.mobileName}>{row.facility.name}</span>
+                <span className={styles.facilityMeta}>
+                  {facilityTypeLabel(row.facility.facility_type)} · {row.facility.city}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {detailFacilityId ? (
         <FacilityDetail
           facilityId={detailFacilityId}

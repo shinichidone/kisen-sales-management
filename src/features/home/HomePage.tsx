@@ -7,10 +7,13 @@ import { useAuth } from '../../contexts/AuthContext'
 import { updateAppUserDisplayName } from '../../lib/appUsersApi'
 import { APP_NAME } from '../../lib/brand'
 import { getErrorMessage } from '../../lib/errors'
-import { fetchServices } from '../../lib/facilitiesApi'
+import { fetchFacilities, fetchServices } from '../../lib/facilitiesApi'
 import { fetchAllReferralCases, type ReferralCaseSummary } from '../../lib/referralsApi'
 import { fetchAllSalesVisits, type SalesVisitSummary } from '../../lib/salesVisitsApi'
-import type { Service } from '../../types/facility'
+import type { Facility, Service } from '../../types/facility'
+import { referralStatusLabel } from '../../types/referral'
+import { salesVisitResultLabel } from '../../types/salesVisit'
+import { FacilityDetail } from '../facilities/FacilityDetail'
 import styles from './HomePage.module.css'
 
 type QuickEntryKind = 'browse' | 'visit' | 'referral'
@@ -45,6 +48,28 @@ function displayNameWithSan(name: string): string {
   return /さん$/.test(trimmed) ? trimmed : `${trimmed}さん`
 }
 
+function formatMonthLabel(monthValue: string): string {
+  const [year, month] = monthValue.split('-')
+  return `${Number(year)}年${Number(month)}月`
+}
+
+function formatVisitDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatDateLabel(ymd: string): string {
+  const [year, month, day] = ymd.split('-')
+  return `${Number(year)}/${Number(month)}/${Number(day)}`
+}
+
+type MonthListKind = 'visits' | 'met' | 'referrals'
+
 function serviceShortName(service: Service): string {
   if (service.code === 'shoeicho') return '昭栄町'
   if (service.code === 'minami-hanadai') return '南花台'
@@ -55,21 +80,26 @@ function serviceShortName(service: Service): string {
 export function HomePage({ onNavigate, onQuickEntry }: Props) {
   const { appUser, refreshAppUser } = useAuth()
   const [services, setServices] = useState<Service[]>([])
+  const [facilities, setFacilities] = useState<Facility[]>([])
   const [visits, setVisits] = useState<SalesVisitSummary[]>([])
   const [referrals, setReferrals] = useState<ReferralCaseSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [monthListKind, setMonthListKind] = useState<MonthListKind | null>(null)
+  const [detailFacilityId, setDetailFacilityId] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const [nextServices, nextVisits, nextReferrals] = await Promise.all([
+      const [nextServices, nextFacilities, nextVisits, nextReferrals] = await Promise.all([
         fetchServices(),
+        fetchFacilities(),
         fetchAllSalesVisits(),
         fetchAllReferralCases(),
       ])
       setServices(nextServices)
+      setFacilities(nextFacilities)
       setVisits(nextVisits)
       setReferrals(nextReferrals)
     } catch (err) {
@@ -123,6 +153,32 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
 
   const givenName = displayNameWithSan(appUser?.display_name ?? '')
   const isAdmin = appUser?.role === 'system_admin'
+  const monthLabel = formatMonthLabel(monthPrefix)
+
+  const facilityNameById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const facility of facilities) {
+      map.set(facility.id, facility.name)
+    }
+    return map
+  }, [facilities])
+
+  const monthVisitItems = useMemo(() => {
+    const rows = monthListKind === 'met' ? monthVisits.filter((visit) => visit.result === 'met') : monthVisits
+    return [...rows].sort((a, b) => b.visited_at.localeCompare(a.visited_at))
+  }, [monthListKind, monthVisits])
+
+  const monthReferralItems = useMemo(
+    () => [...monthReferrals].sort((a, b) => b.referred_on.localeCompare(a.referred_on)),
+    [monthReferrals],
+  )
+
+  const listTitle =
+    monthListKind === 'visits'
+      ? `${monthLabel}の訪問`
+      : monthListKind === 'met'
+        ? `${monthLabel}の面会`
+        : `${monthLabel}の紹介`
 
   return (
     <div className={styles.page}>
@@ -153,32 +209,45 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
         <>
           <section className={styles.section}>
             <h2 className={styles.sectionTitle}>会社全体｜今月</h2>
+            <p className={styles.sectionHint}>数字をタップすると、今月の一覧が見られます</p>
             <div className={styles.companyGrid}>
               <div className={styles.activityCard}>
                 <p className={styles.cardEyebrow}>活動</p>
                 <div className={styles.splitKpi}>
-                  <div>
+                  <button
+                    type="button"
+                    className={styles.kpiButton}
+                    onClick={() => setMonthListKind('visits')}
+                  >
                     <span className={styles.kpiValueActivity}>{overallVisitCount}</span>
                     <span className={styles.kpiLabel}>訪問</span>
-                  </div>
-                  <div>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.kpiButton}
+                    onClick={() => setMonthListKind('met')}
+                  >
                     <span className={styles.kpiValueActivity}>{overallMetCount}</span>
                     <span className={styles.kpiLabel}>面会</span>
-                  </div>
+                  </button>
                 </div>
               </div>
-              <div className={styles.referralCard}>
+              <button
+                type="button"
+                className={styles.referralCardButton}
+                onClick={() => setMonthListKind('referrals')}
+              >
                 <p className={styles.cardEyebrowReferral}>紹介</p>
                 <div className={styles.singleKpi}>
                   <span className={styles.kpiValueReferral}>{overallReferralCount}</span>
                   <span className={styles.kpiLabel}>紹介件数</span>
                 </div>
-              </div>
+              </button>
             </div>
           </section>
 
           <section className={styles.section}>
-            <h2 className={styles.sectionTitle}>サービス別営業活動</h2>
+            <h2 className={styles.sectionTitle}>サービス別営業活動｜今月</h2>
             <div className={styles.serviceList}>
               {serviceRows.map((row) => (
                 <div key={row.id} className={styles.serviceRow}>
@@ -223,6 +292,76 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
             </button>
           ) : null}
         </>
+      ) : null}
+
+      {monthListKind ? (
+        <div className={styles.listOverlay}>
+          <div className={styles.listPanel} role="dialog" aria-modal="true" aria-labelledby="month-list-title">
+            <div className={styles.listHeader}>
+              <div>
+                <h2 id="month-list-title">{listTitle}</h2>
+                <p>施設をタップすると詳細を開けます</p>
+              </div>
+              <button type="button" className={styles.listClose} onClick={() => setMonthListKind(null)}>
+                閉じる
+              </button>
+            </div>
+            <div className={styles.listBody}>
+              {monthListKind === 'referrals' ? (
+                monthReferralItems.length === 0 ? (
+                  <p className={styles.listEmpty}>今月の紹介はまだありません。</p>
+                ) : (
+                  monthReferralItems.map((referral, index) => (
+                    <button
+                      key={`${referral.facility_id}-${referral.referred_on}-${index}`}
+                      type="button"
+                      className={styles.listItem}
+                      onClick={() => setDetailFacilityId(referral.facility_id)}
+                    >
+                      <span className={styles.listItemDate}>{formatDateLabel(referral.referred_on)}</span>
+                      <span className={styles.listItemName}>
+                        {facilityNameById.get(referral.facility_id) ?? '（施設名なし）'}
+                      </span>
+                      <span className={styles.listItemMeta}>{referralStatusLabel(referral.status)}</span>
+                    </button>
+                  ))
+                )
+              ) : monthVisitItems.length === 0 ? (
+                <p className={styles.listEmpty}>
+                  {monthListKind === 'met' ? '今月の面会はまだありません。' : '今月の訪問はまだありません。'}
+                </p>
+              ) : (
+                monthVisitItems.map((visit, index) => (
+                  <button
+                    key={`${visit.facility_id}-${visit.visited_at}-${index}`}
+                    type="button"
+                    className={styles.listItem}
+                    onClick={() => setDetailFacilityId(visit.facility_id)}
+                  >
+                    <span className={styles.listItemDate}>{formatVisitDateTime(visit.visited_at)}</span>
+                    <span className={styles.listItemName}>
+                      {facilityNameById.get(visit.facility_id) ?? '（施設名なし）'}
+                    </span>
+                    <span className={styles.listItemMeta}>{salesVisitResultLabel(visit.result)}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {detailFacilityId ? (
+        <FacilityDetail
+          facilityId={detailFacilityId}
+          services={services}
+          initialTab={monthListKind === 'referrals' ? 'referrals' : 'visits'}
+          onClose={() => {
+            setDetailFacilityId(null)
+            void reload()
+          }}
+          onFacilityUpdated={() => {}}
+        />
       ) : null}
     </div>
   )
