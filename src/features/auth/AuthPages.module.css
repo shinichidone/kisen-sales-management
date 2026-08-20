@@ -176,3 +176,8 @@
   margin: 0 0 0.5rem;
   font-weight: 600;
 }
+
+.nameEdit {
+  font-weight: 400;
+  margin-top: -0.25rem;
+}

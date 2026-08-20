@@ -1,8 +1,10 @@
 import { Compass, MapPin, Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { DisplayNameEditor } from '../../components/DisplayNameEditor'
 import type { AppView } from '../../components/layout/AppShell'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useAuth } from '../../contexts/AuthContext'
+import { updateAppUserDisplayName } from '../../lib/appUsersApi'
 import { APP_NAME } from '../../lib/brand'
 import { getErrorMessage } from '../../lib/errors'
 import { fetchServices } from '../../lib/facilitiesApi'
@@ -51,7 +53,7 @@ function serviceShortName(service: Service): string {
 }
 
 export function HomePage({ onNavigate, onQuickEntry }: Props) {
-  const { appUser } = useAuth()
+  const { appUser, refreshAppUser } = useAuth()
   const [services, setServices] = useState<Service[]>([])
   const [visits, setVisits] = useState<SalesVisitSummary[]>([])
   const [referrals, setReferrals] = useState<ReferralCaseSummary[]>([])
@@ -132,6 +134,15 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
         <h1 className={styles.greeting}>
           {greetingLabel()}、{givenName}
         </h1>
+        {appUser ? (
+          <DisplayNameEditor
+            currentName={appUser.display_name}
+            onSave={async (name) => {
+              await updateAppUserDisplayName(appUser.id, name)
+              await refreshAppUser()
+            }}
+          />
+        ) : null}
         <p className={styles.lead}>今月の営業状況を確認しましょう</p>
       </header>
 

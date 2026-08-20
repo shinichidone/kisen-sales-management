@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useAuth } from '../../contexts/AuthContext'
-import { fetchAppUsers, setAppUserServices, updateAppUserRoleStatus } from '../../lib/appUsersApi'
+import {
+  fetchAppUsers,
+  setAppUserServices,
+  updateAppUserDisplayName,
+  updateAppUserRoleStatus,
+} from '../../lib/appUsersApi'
 import { getErrorMessage } from '../../lib/errors'
 import { fetchServices } from '../../lib/facilitiesApi'
 import { APP_ROLES, APP_USER_STATUSES, type AppRole, type AppUserStatus, type AppUserWithServices } from '../../types/appUser'
@@ -9,13 +14,14 @@ import type { Service } from '../../types/facility'
 import styles from './UsersPage.module.css'
 
 export function UsersPage() {
-  const { appUser: me } = useAuth()
+  const { appUser: me, refreshAppUser } = useAuth()
   const [users, setUsers] = useState<AppUserWithServices[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [nameDrafts, setNameDrafts] = useState<Record<string, string>>({})
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -68,6 +74,27 @@ export function UsersPage() {
     }
   }
 
+  async function handleNameSave(user: AppUserWithServices) {
+    const name = (nameDrafts[user.id] ?? user.display_name).trim()
+    setSavingId(user.id)
+    setError(null)
+    setMessage(null)
+    try {
+      const saved = await updateAppUserDisplayName(user.id, name)
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, display_name: saved } : u)))
+      setNameDrafts((prev) => ({ ...prev, [user.id]: saved }))
+      if (user.id === me?.id) {
+        await refreshAppUser()
+      }
+      setMessage(`「${saved}」に名前を更新しました。`)
+    } catch (err) {
+      console.error('表示名の更新に失敗しました:', err)
+      setError(getErrorMessage(err, '表示名の更新に失敗しました。'))
+    } finally {
+      setSavingId(null)
+    }
+  }
+
   async function handleToggleService(user: AppUserWithServices, serviceId: string) {
     const nextServiceIds = user.service_ids.includes(serviceId)
       ? user.service_ids.filter((id) => id !== serviceId)
@@ -94,7 +121,7 @@ export function UsersPage() {
       <div className={styles.header}>
         <h1 className={styles.title}>ユーザー管理</h1>
         <p className={styles.muted}>
-          新規登録されたユーザーの承認、役割・所属事業所の設定を行います。
+          新規登録されたユーザーの承認、表示名・役割・所属事業所の設定を行います。
         </p>
       </div>
 
@@ -125,6 +152,28 @@ export function UsersPage() {
                     {APP_USER_STATUSES.find((s) => s.value === user.status)?.label}
                   </span>
                 </div>
+
+                <label className={styles.label}>
+                  表示名
+                  <div className={styles.nameRow}>
+                    <input
+                      className={styles.input}
+                      value={nameDrafts[user.id] ?? user.display_name}
+                      disabled={savingId === user.id}
+                      onChange={(e) =>
+                        setNameDrafts((prev) => ({ ...prev, [user.id]: e.target.value }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      className={styles.saveBtn}
+                      disabled={savingId === user.id}
+                      onClick={() => void handleNameSave(user)}
+                    >
+                      保存
+                    </button>
+                  </div>
+                </label>
 
                 {isSelf ? (
                   <p className={styles.hint}>自分自身の役割・ステータスはここから変更できません。</p>

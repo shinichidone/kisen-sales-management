@@ -54,6 +54,19 @@ export async function updateAppUserRoleStatus(
   if (error) throw error
 }
 
+export async function updateAppUserDisplayName(userId: string, displayName: string): Promise<string> {
+  const name = displayName.trim()
+  if (!name) {
+    throw new Error('表示名を入力してください。')
+  }
+  const { error } = await getSupabase()
+    .from('app_users')
+    .update({ display_name: name })
+    .eq('id', userId)
+  if (error) throw error
+  return name
+}
+
 /** 所属事業所（複数選択）を丸ごと入れ替える */
 export async function setAppUserServices(userId: string, serviceIds: string[]): Promise<void> {
   const supabase = getSupabase()

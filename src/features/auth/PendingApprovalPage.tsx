@@ -1,4 +1,7 @@
+import { DisplayNameEditor } from '../../components/DisplayNameEditor'
+import { useAuth } from '../../contexts/AuthContext'
 import { APP_NAME, APP_NAME_JA } from '../../lib/brand'
+import { updateAppUserDisplayName } from '../../lib/appUsersApi'
 import type { AppUser } from '../../types/appUser'
 import styles from './AuthPages.module.css'
 
@@ -8,6 +11,7 @@ type Props = {
 }
 
 export function PendingApprovalPage({ appUser, onSignOut }: Props) {
+  const { refreshAppUser } = useAuth()
   const isDisabled = appUser?.status === 'disabled'
 
   return (
@@ -27,6 +31,17 @@ export function PendingApprovalPage({ appUser, onSignOut }: Props) {
         <dl className={styles.meta}>
           <dt>お名前</dt>
           <dd>{appUser?.display_name ?? '（不明）'}</dd>
+          {appUser ? (
+            <dd className={styles.nameEdit}>
+              <DisplayNameEditor
+                currentName={appUser.display_name}
+                onSave={async (name) => {
+                  await updateAppUserDisplayName(appUser.id, name)
+                  await refreshAppUser()
+                }}
+              />
+            </dd>
+          ) : null}
           <dt>メールアドレス</dt>
           <dd>{appUser?.email ?? '（不明）'}</dd>
         </dl>
