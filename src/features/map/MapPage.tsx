@@ -24,6 +24,24 @@ import { PlaceSearchField, type MapBiasBounds } from './PlaceSearchField'
 import styles from './MapPage.module.css'
 
 type RegisterMode = 'place' | 'manual'
+type ListFilter =
+  | 'all'
+  | 'no_meet_this_month'
+  | 'meet_many'
+  | 'no_visit_this_month'
+  | 'visit_many'
+  | 'no_referral_this_month'
+  | 'referral_many'
+
+const LIST_FILTERS: { value: ListFilter; label: string }[] = [
+  { value: 'all', label: 'すべて' },
+  { value: 'no_meet_this_month', label: '今月面会できていない' },
+  { value: 'meet_many', label: '今月面会が多い' },
+  { value: 'no_visit_this_month', label: '今月未訪問' },
+  { value: 'visit_many', label: '今月訪問が多い' },
+  { value: 'no_referral_this_month', label: '今月紹介なし' },
+  { value: 'referral_many', label: '今月紹介が多い' },
+]
 
 function todayInJst(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tokyo' })
@@ -44,6 +62,9 @@ export function MapPage() {
   const [message, setMessage] = useState<string | null>(null)
 
   const [registerMode, setRegisterMode] = useState<RegisterMode>('place')
+  const [showRegister, setShowRegister] = useState(false)
+  const [query, setQuery] = useState('')
+  const [listFilter, setListFilter] = useState<ListFilter>('all')
   const [selectedPlace, setSelectedPlace] = useState<PlaceCandidate | null>(null)
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null)
   const [pickedLatLng, setPickedLatLng] = useState<{ lat: number; lng: number } | null>(
@@ -66,6 +87,41 @@ export function MapPage() {
   )
 
   const [monthlyStats, setMonthlyStats] = useState<Record<string, FacilityMonthlyStat>>({})
+
+  const filteredFacilities = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const matched = facilities.filter((facility) => {
+      if (
+        q &&
+        !facility.name.toLowerCase().includes(q) &&
+        !facility.city.toLowerCase().includes(q) &&
+        !facility.address.toLowerCase().includes(q)
+      ) {
+        return false
+      }
+      const stat = monthlyStats[facility.id]
+      const visitCount = stat?.visitCount ?? 0
+      const metCount = stat?.metCount ?? 0
+      const referralCount = stat?.referralCount ?? 0
+      if (listFilter === 'no_meet_this_month') return metCount === 0
+      if (listFilter === 'no_visit_this_month') return visitCount === 0
+      if (listFilter === 'no_referral_this_month') return referralCount === 0
+      return true
+    })
+
+    const countOf = (facilityId: string) => {
+      const stat = monthlyStats[facilityId]
+      if (listFilter === 'meet_many') return stat?.metCount ?? 0
+      if (listFilter === 'visit_many') return stat?.visitCount ?? 0
+      if (listFilter === 'referral_many') return stat?.referralCount ?? 0
+      return 0
+    }
+
+    if (listFilter === 'meet_many' || listFilter === 'visit_many' || listFilter === 'referral_many') {
+      return [...matched].sort((a, b) => countOf(b.id) - countOf(a.id))
+    }
+    return matched
+  }, [facilities, query, listFilter, monthlyStats])
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -123,6 +179,7 @@ export function MapPage() {
     setSelectedPlace(place)
     setPickedLatLng(null)
     setRegisterMode('place')
+    setShowRegister(true)
     setMapCenter({ lat: place.lat, lng: place.lng })
     setMessage(
       `「${place.name}」を選択しました。地図にオレンジのピンが出ます。種別・サービスを選んで保存してください。`,
@@ -137,6 +194,7 @@ export function MapPage() {
       setSelectedPlace(null)
       setPickedLatLng(null)
       setMapCenter({ lat: created.lat, lng: created.lng })
+      setShowRegister(false)
       setMessage(`「${created.name}」を保存しました。`)
     },
     [],
@@ -157,7 +215,14 @@ export function MapPage() {
     setSelectedFacilityId(id)
     setMapCenter({ lat, lng })
     setDetailFacilityId(id)
-    setDetailInitialTab('overview')
+    setDetailInitialTab('visits')
+  }, [])
+
+  const closeRegister = useCallback(() => {
+    setShowRegister(false)
+    setSelectedPlace(null)
+    setPickedLatLng(null)
+    setMessage(null)
   }, [])
 
   const handleAddressGeocode = useCallback(async (address: string) => {
@@ -210,83 +275,137 @@ export function MapPage() {
       <div className={styles.page}>
         <aside className={styles.panel}>
           <div>
-            <h2 className={styles.sectionTitle}>施設を登録</h2>
-            <p className={styles.muted}>
-              検索して候補選択 → 種別・サービスを選んで保存。見つからない場合は手動登録。
-            </p>
+            <h2 className={styles.sectionTitle}>登録済み事業所を探す</h2>
+            <p className={styles.muted}>名前・市区町村・住所で検索できます。</p>
           </div>
 
-          <div className={styles.tabs}>
-            <button
-              type="button"
-              className={registerMode === 'place' ? styles.tabActive : styles.tab}
-              onClick={() => {
-                setRegisterMode('place')
-              }}
-            >
-              Maps検索
-            </button>
-            <button
-              type="button"
-              className={registerMode === 'manual' ? styles.tabActive : styles.tab}
-              onClick={() => setRegisterMode('manual')}
-            >
-              手動登録
-            </button>
-          </div>
-
-          {registerMode === 'place' ? (
-            <PlaceSearchField
-              onSelect={handlePlaceSelect}
-              biasBounds={mapBounds}
-              biasCenter={mapCenter}
-            />
-          ) : null}
-
-          <FacilityForm
-            mode={registerMode}
-            initialPlace={selectedPlace}
-            pickedLatLng={pickedLatLng}
-            onAddressGeocode={handleAddressGeocode}
-            onSubmit={handleSave}
-            onCancel={() => {
-              setSelectedPlace(null)
-              setPickedLatLng(null)
-              setMessage(null)
-            }}
+          <input
+            className={styles.input}
+            placeholder="例：寿里苑、河内長野市"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-label="登録済み事業所を検索"
           />
+
+          <div>
+            <p className={styles.filterLabel}>一覧の絞り込み</p>
+            <div className={styles.chips}>
+              {LIST_FILTERS.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  className={listFilter === item.value ? styles.chipActive : styles.chip}
+                  onClick={() => setListFilter(item.value)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {message ? <div className={styles.alertOk}>{message}</div> : null}
           {loadError ? <div className={styles.alert}>{loadError}</div> : null}
 
           <div>
-            <h2 className={styles.sectionTitle}>登録済み施設</h2>
+            <h2 className={styles.sectionTitle}>
+              事業所一覧
+              {!loading ? <span className={styles.count}>（{filteredFacilities.length}件）</span> : null}
+            </h2>
             {loading ? <LoadingSpinner /> : null}
             {!loading && facilities.length === 0 ? (
-              <p className={styles.empty}>まだ施設がありません。左上から登録してください。</p>
+              <p className={styles.empty}>まだ施設がありません。下のボタンから登録してください。</p>
+            ) : null}
+            {!loading && facilities.length > 0 && filteredFacilities.length === 0 ? (
+              <p className={styles.empty}>条件に合う事業所が見つかりません。</p>
             ) : null}
             <div className={styles.list}>
-              {facilities.map((facility) => (
-                <button
-                  key={facility.id}
-                  type="button"
-                  className={
-                    facility.id === selectedFacilityId
-                      ? styles.listItemActive
-                      : styles.listItem
-                  }
-                  onClick={() => {
-                    handleOpenFacilityFromList(facility.id, facility.lat, facility.lng)
-                  }}
-                >
-                  <strong>{facility.name}</strong>
-                  <span>
-                    {facility.city} · {facilityTypeLabel(facility.facility_type)}
-                  </span>
-                </button>
-              ))}
+              {filteredFacilities.map((facility) => {
+                const stat = monthlyStats[facility.id]
+                return (
+                  <button
+                    key={facility.id}
+                    type="button"
+                    className={
+                      facility.id === selectedFacilityId ? styles.listItemActive : styles.listItem
+                    }
+                    onClick={() => {
+                      handleOpenFacilityFromList(facility.id, facility.lat, facility.lng)
+                    }}
+                  >
+                    <strong>{facility.name}</strong>
+                    <span>
+                      {facility.city} · {facilityTypeLabel(facility.facility_type)}
+                    </span>
+                    <span className={styles.listItemStats}>
+                      今月 訪問{stat?.visitCount ?? 0} · 面会{stat?.metCount ?? 0} · 紹介
+                      {stat?.referralCount ?? 0}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </div>
+
+          {showRegister ? (
+            <div className={styles.registerBox}>
+              <div className={styles.registerHeader}>
+                <h2 className={styles.sectionTitle}>新たに施設を登録する</h2>
+                <button type="button" className={styles.secondary} onClick={closeRegister}>
+                  閉じる
+                </button>
+              </div>
+              <p className={styles.muted}>
+                検索して候補選択 → 種別を選んで保存。見つからない場合は手動登録。
+              </p>
+
+              <div className={styles.tabs}>
+                <button
+                  type="button"
+                  className={registerMode === 'place' ? styles.tabActive : styles.tab}
+                  onClick={() => {
+                    setRegisterMode('place')
+                  }}
+                >
+                  Maps検索
+                </button>
+                <button
+                  type="button"
+                  className={registerMode === 'manual' ? styles.tabActive : styles.tab}
+                  onClick={() => setRegisterMode('manual')}
+                >
+                  手動登録
+                </button>
+              </div>
+
+              {registerMode === 'place' ? (
+                <PlaceSearchField
+                  onSelect={handlePlaceSelect}
+                  biasBounds={mapBounds}
+                  biasCenter={mapCenter}
+                />
+              ) : null}
+
+              <FacilityForm
+                mode={registerMode}
+                initialPlace={selectedPlace}
+                pickedLatLng={pickedLatLng}
+                onAddressGeocode={handleAddressGeocode}
+                onSubmit={handleSave}
+                onCancel={closeRegister}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={styles.registerBtn}
+              onClick={() => {
+                setShowRegister(true)
+                setRegisterMode('place')
+              }}
+            >
+              新たに施設を登録する
+            </button>
+          )}
         </aside>
 
         <FacilityMap
@@ -295,10 +414,10 @@ export function MapPage() {
           facilities={facilities}
           monthlyStats={monthlyStats}
           selectedId={selectedFacilityId}
-          previewPlace={registerMode === 'place' ? selectedPlace : null}
-          previewLatLng={registerMode === 'manual' ? pickedLatLng : null}
+          previewPlace={showRegister && registerMode === 'place' ? selectedPlace : null}
+          previewLatLng={showRegister && registerMode === 'manual' ? pickedLatLng : null}
           currentLocation={currentLocation}
-          mapPickMode={registerMode === 'manual'}
+          mapPickMode={showRegister && registerMode === 'manual'}
           onSelect={handleSelectFacility}
           onOpenDetail={handleOpenDetail}
           onPreviewMove={(latLng) => {
@@ -306,7 +425,7 @@ export function MapPage() {
             setMessage('ピンの位置を更新しました。この位置で保存されます。')
           }}
           onMapClick={(latLng) => {
-            if (registerMode !== 'manual') return
+            if (!showRegister || registerMode !== 'manual') return
             setPickedLatLng(latLng)
             setMapCenter(latLng)
             setMessage('地図上の位置をセットしました。オレンジのピンをドラッグして微調整できます。')

@@ -59,6 +59,11 @@
   color: var(--accent-deep);
 }
 
+.count {
+  font-weight: 700;
+  color: var(--muted);
+}
+
 .muted {
   margin: 0;
   font-size: 0.8rem;
@@ -86,6 +91,62 @@
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+}
+
+.filterLabel {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip,
+.chipActive {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.chipActive {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.registerBtn {
+  width: 100%;
+  border: 1px dashed var(--accent-soft);
+  background: var(--accent-pale);
+  color: var(--accent-deep);
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.registerBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--line);
+}
+
+.registerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .list {
@@ -120,6 +181,11 @@
   margin-top: 0.2rem;
   font-size: 0.75rem;
   color: var(--muted);
+}
+
+.listItemStats {
+  color: var(--ink-soft) !important;
+  font-weight: 700;
 }
 
 .card {
@@ -193,6 +259,7 @@
   background: #fff;
   color: var(--ink);
   font-size: 16px;
+  width: 100%;
 }
 
 .textarea {
@@ -321,7 +388,7 @@
 @media (max-width: 960px) {
   .page {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(340px, 56vh) auto auto;
+    grid-template-rows: minmax(300px, 48vh) auto;
     height: auto;
     min-height: calc(100vh - var(--header-h));
   }
@@ -342,6 +409,6 @@
   }
 
   .panelRight {
-    order: 1;
+    display: none;
   }
 }
