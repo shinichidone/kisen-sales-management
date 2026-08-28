@@ -39,7 +39,7 @@ Phase1〜6 は検証のため、暫定で `anon` から施設の閲覧・登録�
    を**すべて**貼り付け
 4. **Run**（成功メッセージが出ること）
 5. 左メニュー **Table Editor** で確認:
-   - `services` … 3件（昭栄町 / 南花台 / 訪問看護）
+   - `services` … 3件（デイサービスA / デイサービスB / 訪問看護ステーション）
    - `facilities` … 空でよい
    - `facility_target_services` … 空でよい
 
@@ -48,7 +48,7 @@ Phase1〜6 は検証のため、暫定で `anon` から施設の閲覧・登録�
 | メッセージの例 | 対処 |
 |---|---|
 | `type "facility_type" already exists` | 以前実行済みの可能性。Table Editor で表があるか確認 |
-| `relation "services" already exists` | 同上。中身が喜仙向け3件か確認 |
+| `relation "services" already exists` | 同上。中身がサービス3件か確認 |
 | `permission denied for table services` | 下の「権限付与SQL」を追加実行 |
 | 権限エラー | プロジェクトの Owner / 十分な権限で実行 |
 

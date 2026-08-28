@@ -51,12 +51,6 @@ function formatMonthLabel(monthValue: string): string {
   return `${Number(year)}年${Number(month)}月`
 }
 
-function serviceShortName(service: Service): string {
-  if (service.code === 'shoeicho') return '昭栄町'
-  if (service.code === 'minami-hanadai') return '南花台'
-  if (service.code === 'houmon-kango') return '訪問看護'
-  return service.name
-}
 
 const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'name', label: '施設名' },
@@ -242,7 +236,7 @@ export function AnalyticsPage() {
 
   const periodLabel = period === 'all' ? '全期間' : formatMonthLabel(monthValue)
   const selectedService = services.find((service) => service.id === serviceId)
-  const scopeLabel = selectedService ? ` ／ ${serviceShortName(selectedService)}` : ''
+  const scopeLabel = selectedService ? ` ／ ${selectedService.name}` : ''
 
   return (
     <div className={styles.page}>
@@ -271,7 +265,7 @@ export function AnalyticsPage() {
                 className={serviceId === service.id ? styles.chipActive : styles.chip}
                 onClick={() => setServiceId(service.id)}
               >
-                {serviceShortName(service)}
+                {service.name}
               </button>
             ))}
           </div>

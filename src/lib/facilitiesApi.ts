@@ -1,5 +1,5 @@
 import type { FacilityMemoHistory } from '../types/contact'
-import type { Facility, FacilityDraft, FacilityType, Service } from '../types/facility'
+import { serviceDisplayName, type Facility, type FacilityDraft, type FacilityType, type Service } from '../types/facility'
 import { getSupabase } from './supabase'
 
 type FacilityRow = {
@@ -46,7 +46,10 @@ export async function fetchServices(): Promise<Service[]> {
     .order('sort_order', { ascending: true })
 
   if (error) throw error
-  return (data ?? []) as Service[]
+  return ((data ?? []) as Service[]).map((service) => ({
+    ...service,
+    name: serviceDisplayName(service),
+  }))
 }
 
 export async function fetchFacilities(): Promise<Facility[]> {

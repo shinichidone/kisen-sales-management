@@ -25,9 +25,9 @@ create table public.services (
 );
 
 insert into public.services (code, name, sort_order) values
-  ('shoeicho', 'デイサービス喜仙 昭栄町', 1),
-  ('minami-hanadai', 'デイサービス喜仙 南花台', 2),
-  ('houmon-kango', '訪問看護ステーション喜仙', 3);
+  ('shoeicho', 'デイサービスA', 1),
+  ('minami-hanadai', 'デイサービスB', 2),
+  ('houmon-kango', '訪問看護ステーション', 3);
 
 -- 営業先施設
 create table public.facilities (

@@ -17,6 +17,17 @@ export type Service = {
   is_active: boolean
 }
 
+/** 画面に出すサービス名（DBの旧称もここで揃える） */
+export function serviceDisplayName(service: Pick<Service, 'code' | 'name'>): string {
+  if (service.code === 'shoeicho') return 'デイサービスA'
+  if (service.code === 'minami-hanadai') return 'デイサービスB'
+  if (service.code === 'houmon-kango') return '訪問看護ステーション'
+  if (service.name.includes('昭栄')) return 'デイサービスA'
+  if (service.name.includes('南花台')) return 'デイサービスB'
+  if (service.name.includes('訪問看護ステーション喜仙')) return '訪問看護ステーション'
+  return service.name
+}
+
 export type Facility = {
   id: string
   google_place_id: string | null

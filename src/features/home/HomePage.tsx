@@ -70,13 +70,6 @@ function formatDateLabel(ymd: string): string {
 
 type MonthListKind = 'visits' | 'met' | 'referrals'
 
-function serviceShortName(service: Service): string {
-  if (service.code === 'shoeicho') return '昭栄町'
-  if (service.code === 'minami-hanadai') return '南花台'
-  if (service.code === 'houmon-kango') return '訪問看護'
-  return service.name
-}
-
 export function HomePage({ onNavigate, onQuickEntry }: Props) {
   const { appUser, refreshAppUser } = useAuth()
   const [services, setServices] = useState<Service[]>([])
@@ -141,7 +134,7 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
     () =>
       services.map((service) => ({
         id: service.id,
-        name: serviceShortName(service),
+        name: service.name,
         metCount: monthVisits.filter(
           (visit) => visit.result === 'met' && visit.service_ids.includes(service.id),
         ).length,
