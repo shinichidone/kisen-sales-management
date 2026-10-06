@@ -101,6 +101,58 @@
   color: var(--muted);
 }
 
+.summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.summaryCard,
+.summaryCardAccent {
+  min-height: 104px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--activity);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.summaryCardAccent {
+  border-top-color: #f59e0b;
+}
+
+.summaryCard span,
+.summaryCardAccent span {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.summaryCard strong,
+.summaryCardAccent strong {
+  color: var(--accent-deep);
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.summaryCardAccent strong {
+  color: #b45309;
+}
+
+.summaryCard small,
+.summaryCardAccent small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .tableWrap {
   overflow-x: auto;
   border: 1px solid var(--line);
@@ -192,6 +244,15 @@
 
   .tableWrap {
     display: none;
+  }
+
+  .summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summaryCard,
+  .summaryCardAccent {
+    min-height: 88px;
   }
 
   .mobileList {

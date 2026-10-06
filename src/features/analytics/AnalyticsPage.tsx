@@ -209,6 +209,22 @@ export function AnalyticsPage() {
     return sorted
   }, [rows, sortKey, sortDir])
 
+  const totals = useMemo(() => {
+    const visitCount = filteredVisits.length
+    const metCount = filteredVisits.filter((visit) => visit.result === 'met').length
+    const referralCount = filteredReferrals.length
+    const startedCount = filteredReferrals.filter((referral) => referral.status === 'started').length
+
+    return {
+      visitCount,
+      metCount,
+      meetRate: visitCount > 0 ? metCount / visitCount : null,
+      referralCount,
+      startedCount,
+      startRate: referralCount > 0 ? startedCount / referralCount : null,
+    }
+  }, [filteredVisits, filteredReferrals])
+
   const sortPreset = useMemo<SortPreset | ''>(() => {
     const match = SORT_PRESETS.find((item) => item.key === sortKey && item.dir === sortDir)
     return match?.value ?? ''
@@ -324,6 +340,35 @@ export function AnalyticsPage() {
         {periodLabel}
         {scopeLabel}
       </p>
+
+      {!loading ? (
+        <section className={styles.summary} aria-label={`${periodLabel}${scopeLabel}の集計`}>
+          <div className={styles.summaryCard}>
+            <span>営業数</span>
+            <strong>{totals.visitCount}</strong>
+            <small>件</small>
+          </div>
+          <div className={styles.summaryCard}>
+            <span>面会数</span>
+            <strong>{totals.metCount}</strong>
+            <small>件</small>
+          </div>
+          <div className={styles.summaryCard}>
+            <span>面会率</span>
+            <strong>{formatRate(totals.meetRate)}</strong>
+          </div>
+          <div className={styles.summaryCardAccent}>
+            <span>紹介数</span>
+            <strong>{totals.referralCount}</strong>
+            <small>件</small>
+          </div>
+          <div className={styles.summaryCardAccent}>
+            <span>利用開始</span>
+            <strong>{totals.startedCount}</strong>
+            <small>{formatRate(totals.startRate)}</small>
+          </div>
+        </section>
+      ) : null}
 
       {loading ? <LoadingSpinner /> : null}
       {error ? <div className={styles.alert}>{error}</div> : null}
