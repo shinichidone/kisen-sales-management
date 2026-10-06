@@ -160,6 +160,35 @@
   color: var(--muted);
 }
 
+.textButton {
+  align-self: flex-end;
+  border: 0;
+  background: transparent;
+  color: var(--accent-deep);
+  padding: 0.1rem 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}
+
+.formIntro {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.formIntro strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.formIntro p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
 .meta {
   display: grid;
   gap: 0.25rem;
