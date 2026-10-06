@@ -4,7 +4,7 @@ import { getErrorMessage } from '../../lib/errors'
 import { getSupabase } from '../../lib/supabase'
 import styles from './AuthPages.module.css'
 
-type Mode = 'login' | 'signup'
+type Mode = 'login' | 'signup' | 'forgot'
 
 export function LoginPage() {
   const [mode, setMode] = useState<Mode>('login')
@@ -78,6 +78,33 @@ export function LoginPage() {
     }
   }
 
+  async function handleForgotPassword(event: React.FormEvent) {
+    event.preventDefault()
+    setSubmitting(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const redirectTo = new URL(window.location.href)
+      redirectTo.search = '?reset-password=1'
+      redirectTo.hash = ''
+
+      const { error: resetError } = await getSupabase().auth.resetPasswordForEmail(
+        email.trim(),
+        { redirectTo: redirectTo.toString() },
+      )
+      if (resetError) throw resetError
+
+      setMessage(
+        'パスワード再設定メールを送信しました。メール内のリンクを開いて、新しいパスワードを設定してください。',
+      )
+    } catch (err) {
+      console.error('パスワード再設定メールの送信に失敗しました:', err)
+      setError(getErrorMessage(err, 'パスワード再設定メールを送信できませんでした。'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.card}>
@@ -86,7 +113,7 @@ export function LoginPage() {
           <span>{APP_NAME_JA}</span>
         </div>
 
-        <div className={styles.tabs}>
+        <div className={styles.tabs} hidden={mode === 'forgot'}>
           <button
             type="button"
             className={mode === 'login' ? styles.tabActive : styles.tab}
@@ -140,11 +167,18 @@ export function LoginPage() {
                 </button>
               </div>
             </label>
+            <button
+              type="button"
+              className={styles.textButton}
+              onClick={() => switchMode('forgot')}
+            >
+              パスワードを忘れた方
+            </button>
             <button className={styles.primary} type="submit" disabled={submitting}>
               {submitting ? 'ログイン中…' : 'ログイン'}
             </button>
           </form>
-        ) : (
+        ) : mode === 'signup' ? (
           <form className={styles.form} onSubmit={handleSignup}>
             <label className={styles.label}>
               お名前
@@ -195,6 +229,34 @@ export function LoginPage() {
             <p className={styles.hint}>
               登録後、システム管理者が「ユーザー管理」で承認すると利用できます。確認メールは使いません。
             </p>
+          </form>
+        ) : (
+          <form className={styles.form} onSubmit={handleForgotPassword}>
+            <div className={styles.formIntro}>
+              <strong>パスワードを再設定</strong>
+              <p>登録済みのメールアドレスへ、再設定用のリンクを送ります。</p>
+            </div>
+            <label className={styles.label}>
+              メールアドレス
+              <input
+                type="email"
+                className={styles.input}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </label>
+            <button className={styles.primary} type="submit" disabled={submitting}>
+              {submitting ? '送信中…' : '再設定メールを送る'}
+            </button>
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() => switchMode('login')}
+            >
+              ログイン画面へ戻る
+            </button>
           </form>
         )}
       </div>

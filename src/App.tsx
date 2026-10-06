@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { UsersPage } from './features/admin/UsersPage'
 import { AnalyticsPage } from './features/analytics/AnalyticsPage'
 import { LoginPage } from './features/auth/LoginPage'
+import { PasswordResetPage } from './features/auth/PasswordResetPage'
 import { PendingApprovalPage } from './features/auth/PendingApprovalPage'
 import { FacilityDetail, type FacilityDetailTab } from './features/facilities/FacilityDetail'
 import { HomePage } from './features/home/HomePage'
@@ -90,8 +91,14 @@ function AuthenticatedApp() {
 function AuthGate() {
   const { loading, session, appUser, signOut } = useAuth()
 
+  const isPasswordReset = new URLSearchParams(window.location.search).has('reset-password')
+
   if (loading) {
     return <LoadingSpinner fullPage label="読み込み中…" />
+  }
+
+  if (isPasswordReset) {
+    return <PasswordResetPage />
   }
 
   if (!session) {
