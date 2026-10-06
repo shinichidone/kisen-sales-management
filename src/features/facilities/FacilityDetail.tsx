@@ -162,6 +162,9 @@ export function FacilityDetail({
   const [contactDraft, setContactDraft] = useState<ContactDraft>(emptyContactDraft)
   const [editingContactId, setEditingContactId] = useState<string | null>(null)
   const [savingContact, setSavingContact] = useState(false)
+  const [showQuickContactForm, setShowQuickContactForm] = useState(false)
+  const [quickContactDraft, setQuickContactDraft] = useState<ContactDraft>(emptyContactDraft)
+  const [savingQuickContact, setSavingQuickContact] = useState(false)
 
   const [salesVisits, setSalesVisits] = useState<SalesVisit[]>([])
   const [visitDraft, setVisitDraft] = useState<SalesVisitDraft>(emptyVisitDraft)
@@ -293,6 +296,31 @@ export function FacilityDetail({
       setError(getErrorMessage(err, '担当者の保存に失敗しました。'))
     } finally {
       setSavingContact(false)
+    }
+  }
+
+  async function handleSaveQuickContact(event: React.FormEvent) {
+    event.preventDefault()
+    setSavingQuickContact(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const affiliation = await createContactAtFacility(facilityId, quickContactDraft)
+      setCurrentContacts((previous) => [affiliation, ...previous])
+      setVisitDraft((previous) => ({
+        ...previous,
+        contact_ids: previous.contact_ids.includes(affiliation.contact.id)
+          ? previous.contact_ids
+          : [...previous.contact_ids, affiliation.contact.id],
+      }))
+      setQuickContactDraft(emptyContactDraft)
+      setShowQuickContactForm(false)
+      setMessage(`${affiliation.contact.name}さんを登録し、面会者に選択しました。`)
+    } catch (err) {
+      console.error('面会者の簡易登録に失敗しました:', err)
+      setError(getErrorMessage(err, 'スタッフを登録できませんでした。'))
+    } finally {
+      setSavingQuickContact(false)
     }
   }
 
@@ -831,9 +859,79 @@ export function FacilityDetail({
                   </div>
                 </div>
                 <div>
-                  <p className={styles.sectionTitle}>面会者（複数選択可）</p>
+                  <div className={styles.sectionTitleRow}>
+                    <p className={styles.sectionTitle}>面会者（複数選択可）</p>
+                    <button
+                      type="button"
+                      className={styles.inlineAddButton}
+                      onClick={() => setShowQuickContactForm((previous) => !previous)}
+                    >
+                      {showQuickContactForm ? '閉じる' : '＋ スタッフを登録する'}
+                    </button>
+                  </div>
+                  {showQuickContactForm ? (
+                    <div className={styles.quickContactBox}>
+                      <label className={styles.label}>
+                        氏名
+                        <input
+                          className={styles.input}
+                          value={quickContactDraft.name}
+                          onChange={(event) =>
+                            setQuickContactDraft((previous) => ({
+                              ...previous,
+                              name: event.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </label>
+                      <label className={styles.label}>
+                        職種
+                        <select
+                          className={styles.select}
+                          value={quickContactDraft.job_role}
+                          onChange={(event) =>
+                            setQuickContactDraft((previous) => ({
+                              ...previous,
+                              job_role: event.target.value as ContactJobRole,
+                            }))
+                          }
+                        >
+                          {CONTACT_JOB_ROLES.map((role) => (
+                            <option key={role.value} value={role.value}>
+                              {role.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {quickContactDraft.job_role === 'other' ? (
+                        <label className={styles.label}>
+                          その他の職種名
+                          <input
+                            className={styles.input}
+                            value={quickContactDraft.job_role_other}
+                            onChange={(event) =>
+                              setQuickContactDraft((previous) => ({
+                                ...previous,
+                                job_role_other: event.target.value,
+                              }))
+                            }
+                            required
+                          />
+                        </label>
+                      ) : null}
+                      <button
+                        type="button"
+                        className={styles.primary}
+                        disabled={savingQuickContact || !quickContactDraft.name.trim()}
+                        onClick={(event) => void handleSaveQuickContact(event)}
+                      >
+                        {savingQuickContact ? '登録中…' : '登録して選択する'}
+                      </button>
+                    </div>
+                  ) : null}
                   {knownContacts.length === 0 ? (
-                    <p className={styles.empty}>担当者タブで先に担当者を登録してください。</p>
+                    <p className={styles.empty}>「スタッフを登録する」から登録してください。</p>
                   ) : (
                     <div className={styles.checkGroup}>
                       {knownContacts.map((contact) => (
