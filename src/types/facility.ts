@@ -19,11 +19,11 @@ export type Service = {
 
 /** 画面に出すサービス名（DBの旧称もここで揃える） */
 export function serviceDisplayName(service: Pick<Service, 'code' | 'name'>): string {
-  if (service.code === 'shoeicho') return 'デイサービスA'
-  if (service.code === 'minami-hanadai') return 'デイサービスB'
+  if (service.code === 'shoeicho') return 'デイサービス 昭栄町'
+  if (service.code === 'minami-hanadai') return 'デイサービス 南花台'
   if (service.code === 'houmon-kango') return '訪問看護ステーション'
-  if (service.name.includes('昭栄')) return 'デイサービスA'
-  if (service.name.includes('南花台')) return 'デイサービスB'
+  if (service.name.includes('昭栄')) return 'デイサービス 昭栄町'
+  if (service.name.includes('南花台')) return 'デイサービス 南花台'
   if (service.name.includes('訪問看護ステーション喜仙')) return '訪問看護ステーション'
   return service.name
 }
