@@ -1,10 +1,9 @@
 import { Compass, MapPin, Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { DisplayNameEditor } from '../../components/DisplayNameEditor'
 import type { AppView } from '../../components/layout/AppShell'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useAuth } from '../../contexts/AuthContext'
-import { updateAppUserDisplayName } from '../../lib/appUsersApi'
+import { useActiveStaff } from '../../contexts/ActiveStaffContext'
 import { APP_NAME } from '../../lib/brand'
 import { getErrorMessage } from '../../lib/errors'
 import { fetchFacilities, fetchServices } from '../../lib/facilitiesApi'
@@ -71,7 +70,8 @@ function formatDateLabel(ymd: string): string {
 type MonthListKind = 'visits' | 'met' | 'referrals'
 
 export function HomePage({ onNavigate, onQuickEntry }: Props) {
-  const { appUser, refreshAppUser } = useAuth()
+  const { appUser } = useAuth()
+  const { staffMembers, activeStaff, activeStaffName, loadingStaff, selectStaff, addStaff } = useActiveStaff()
   const [services, setServices] = useState<Service[]>([])
   const [facilities, setFacilities] = useState<Facility[]>([])
   const [visits, setVisits] = useState<SalesVisitSummary[]>([])
@@ -80,6 +80,10 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [monthListKind, setMonthListKind] = useState<MonthListKind | null>(null)
   const [detailFacilityId, setDetailFacilityId] = useState<string | null>(null)
+  const [showStaffForm, setShowStaffForm] = useState(false)
+  const [newStaffName, setNewStaffName] = useState('')
+  const [savingStaff, setSavingStaff] = useState(false)
+  const [staffError, setStaffError] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -124,8 +128,11 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
   const overallReferralCount = monthReferrals.length
 
   const myVisits = useMemo(
-    () => (appUser ? monthVisits.filter((visit) => visit.created_by === appUser.id) : []),
-    [monthVisits, appUser],
+    () =>
+      activeStaffName
+        ? monthVisits.filter((visit) => visit.registered_by === activeStaffName)
+        : [],
+    [monthVisits, activeStaffName],
   )
   const myVisitCount = myVisits.length
   const myMetCount = myVisits.filter((visit) => visit.result === 'met').length
@@ -144,7 +151,7 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
     [services, monthVisits, monthReferrals],
   )
 
-  const givenName = displayNameWithSan(appUser?.display_name ?? '')
+  const givenName = displayNameWithSan(activeStaffName)
   const isAdmin = appUser?.role === 'system_admin'
   const monthLabel = formatMonthLabel(monthPrefix)
 
@@ -173,6 +180,21 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
         ? `${monthLabel}の面会`
         : `${monthLabel}の紹介`
 
+  async function handleAddStaff(event: React.FormEvent) {
+    event.preventDefault()
+    setSavingStaff(true)
+    setStaffError(null)
+    try {
+      await addStaff(newStaffName)
+      setNewStaffName('')
+      setShowStaffForm(false)
+    } catch (err) {
+      setStaffError(getErrorMessage(err, 'スタッフを登録できませんでした。'))
+    } finally {
+      setSavingStaff(false)
+    }
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.hero}>
@@ -184,13 +206,49 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
           {greetingLabel()}、{givenName}
         </h1>
         {appUser ? (
-          <DisplayNameEditor
-            currentName={appUser.display_name}
-            onSave={async (name) => {
-              await updateAppUserDisplayName(appUser.id, name)
-              await refreshAppUser()
-            }}
-          />
+          <div className={styles.staffSwitcher}>
+            <label className={styles.staffSelectLabel}>
+              使用するスタッフ
+              <select
+                className={styles.staffSelect}
+                value={activeStaff?.id ?? ''}
+                disabled={loadingStaff || staffMembers.length === 0}
+                onChange={(event) => selectStaff(event.target.value)}
+              >
+                {staffMembers.length === 0 ? <option value="">未登録</option> : null}
+                {staffMembers.map((staff) => (
+                  <option key={staff.id} value={staff.id}>
+                    {staff.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className={styles.staffAddToggle}
+              onClick={() => {
+                setShowStaffForm((previous) => !previous)
+                setStaffError(null)
+              }}
+            >
+              {showStaffForm ? '閉じる' : '＋ スタッフを登録'}
+            </button>
+            {showStaffForm ? (
+              <form className={styles.staffAddForm} onSubmit={(event) => void handleAddStaff(event)}>
+                <input
+                  className={styles.staffNameInput}
+                  value={newStaffName}
+                  onChange={(event) => setNewStaffName(event.target.value)}
+                  placeholder="スタッフ名"
+                  required
+                />
+                <button type="submit" disabled={savingStaff || !newStaffName.trim()}>
+                  {savingStaff ? '登録中…' : '登録して選択'}
+                </button>
+              </form>
+            ) : null}
+            {staffError ? <p className={styles.staffError}>{staffError}</p> : null}
+          </div>
         ) : null}
         <p className={styles.lead}>今月の営業状況を確認しましょう</p>
       </header>

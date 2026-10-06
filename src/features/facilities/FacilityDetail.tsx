@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useAuth } from '../../contexts/AuthContext'
+import { useActiveStaff } from '../../contexts/ActiveStaffContext'
 import {
   createContactAtFacility,
   deleteFacilityContact,
@@ -142,6 +143,7 @@ export function FacilityDetail({
   onFacilityUpdated,
 }: Props) {
   const { appUser } = useAuth()
+  const { activeStaffName } = useActiveStaff()
   const [tab, setTab] = useState<Tab>(initialTab ?? 'overview')
   const [facility, setFacility] = useState<Facility | null>(null)
   const [loading, setLoading] = useState(true)
@@ -318,7 +320,7 @@ export function FacilityDetail({
       setMessage(`${affiliation.contact.name}さんを登録し、面会者に選択しました。`)
     } catch (err) {
       console.error('面会者の簡易登録に失敗しました:', err)
-      setError(getErrorMessage(err, 'スタッフを登録できませんでした。'))
+      setError(getErrorMessage(err, '担当者を登録できませんでした。'))
     } finally {
       setSavingQuickContact(false)
     }
@@ -386,7 +388,7 @@ export function FacilityDetail({
         if (!appUser) throw new Error('ログイン情報を確認できませんでした。')
         await createSalesVisit(facilityId, visitDraft, {
           id: appUser.id,
-          displayName: appUser.display_name,
+          displayName: activeStaffName || appUser.display_name,
         })
         setMessage('営業履歴を登録しました。')
       }
@@ -866,7 +868,7 @@ export function FacilityDetail({
                       className={styles.inlineAddButton}
                       onClick={() => setShowQuickContactForm((previous) => !previous)}
                     >
-                      {showQuickContactForm ? '閉じる' : '＋ スタッフを登録する'}
+                      {showQuickContactForm ? '閉じる' : '＋ 担当者を登録する'}
                     </button>
                   </div>
                   {showQuickContactForm ? (
@@ -931,7 +933,7 @@ export function FacilityDetail({
                     </div>
                   ) : null}
                   {knownContacts.length === 0 ? (
-                    <p className={styles.empty}>「スタッフを登録する」から登録してください。</p>
+                    <p className={styles.empty}>「担当者を登録する」から登録してください。</p>
                   ) : (
                     <div className={styles.checkGroup}>
                       {knownContacts.map((contact) => (
@@ -975,7 +977,7 @@ export function FacilityDetail({
                   />
                 </label>
                 <p className={styles.muted}>
-                  登録者: {editingVisitId ? '（元の登録者を維持します）' : (appUser?.display_name ?? '不明なユーザー')}
+                  登録者: {editingVisitId ? '（元の登録者を維持します）' : (activeStaffName || appUser?.display_name || '不明なユーザー')}
                 </p>
                 <div className={styles.actions}>
                   <button className={styles.primary} type="submit" disabled={savingVisit}>

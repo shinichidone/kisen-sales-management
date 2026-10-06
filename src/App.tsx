@@ -3,6 +3,7 @@ import { AppShell, type AppView } from './components/layout/AppShell'
 import { LoadingSpinner } from './components/LoadingSpinner'
 import { SetupGate } from './components/SetupGate'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { ActiveStaffProvider } from './contexts/ActiveStaffContext'
 import { UsersPage } from './features/admin/UsersPage'
 import { AnalyticsPage } from './features/analytics/AnalyticsPage'
 import { LoginPage } from './features/auth/LoginPage'
@@ -121,7 +122,9 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <AuthGate />
+      <ActiveStaffProvider>
+        <AuthGate />
+      </ActiveStaffProvider>
     </AuthProvider>
   )
 }
