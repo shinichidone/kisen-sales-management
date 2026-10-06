@@ -90,6 +90,7 @@ export type SalesVisitSummary = {
   facility_id: string
   visited_at: string
   result: SalesVisitResult
+  registered_by: string
   created_by: string | null
   service_ids: string[]
 }
@@ -98,7 +99,7 @@ export type SalesVisitSummary = {
 export async function fetchAllSalesVisits(): Promise<SalesVisitSummary[]> {
   const { data, error } = await getSupabase()
     .from('sales_visits')
-    .select('facility_id, visited_at, result, created_by, sales_visit_services ( service_id )')
+    .select('facility_id, visited_at, result, registered_by, created_by, sales_visit_services ( service_id )')
 
   if (error) throw error
   return (
@@ -106,6 +107,7 @@ export async function fetchAllSalesVisits(): Promise<SalesVisitSummary[]> {
       facility_id: string
       visited_at: string
       result: SalesVisitResult
+      registered_by: string
       created_by: string | null
       sales_visit_services?: { service_id: string }[] | null
     }[]
@@ -113,6 +115,7 @@ export async function fetchAllSalesVisits(): Promise<SalesVisitSummary[]> {
     facility_id: row.facility_id,
     visited_at: row.visited_at,
     result: row.result,
+    registered_by: row.registered_by,
     created_by: row.created_by,
     service_ids: (row.sales_visit_services ?? []).map((item) => item.service_id),
   }))
