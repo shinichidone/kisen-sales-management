@@ -5,6 +5,7 @@ import { fetchFacilities, fetchServices } from '../../lib/facilitiesApi'
 import { fetchAllReferralCases, type ReferralCaseSummary } from '../../lib/referralsApi'
 import { fetchAllSalesVisits, type SalesVisitSummary } from '../../lib/salesVisitsApi'
 import { facilityTypeLabel, type Facility, type Service } from '../../types/facility'
+import { salesVisitHasResult } from '../../types/salesVisit'
 import { FacilityDetail } from '../facilities/FacilityDetail'
 import styles from './AnalyticsPage.module.css'
 
@@ -138,7 +139,7 @@ export function AnalyticsPage() {
       )
 
       const visitCount = facilityVisits.length
-      const metCount = facilityVisits.filter((visit) => visit.result === 'met').length
+      const metCount = facilityVisits.filter((visit) => salesVisitHasResult(visit, 'met')).length
       const meetRate = visitCount > 0 ? metCount / visitCount : null
 
       const lastVisitedOn = facilityVisits.reduce<string | null>((latest, visit) => {
@@ -211,7 +212,7 @@ export function AnalyticsPage() {
 
   const totals = useMemo(() => {
     const visitCount = filteredVisits.length
-    const metCount = filteredVisits.filter((visit) => visit.result === 'met').length
+    const metCount = filteredVisits.filter((visit) => salesVisitHasResult(visit, 'met')).length
     const referralCount = filteredReferrals.length
     const startedCount = filteredReferrals.filter((referral) => referral.status === 'started').length
 

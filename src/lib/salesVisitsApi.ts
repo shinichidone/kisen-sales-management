@@ -6,6 +6,7 @@ type SalesVisitRow = {
   facility_id: string
   visited_at: string
   result: SalesVisitResult
+  results: SalesVisitResult[] | null
   memo: string
   registered_by: string
   created_by: string | null
@@ -23,6 +24,7 @@ const salesVisitSelect = `
   facility_id,
   visited_at,
   result,
+  results,
   memo,
   registered_by,
   created_by,
@@ -41,6 +43,7 @@ function mapSalesVisit(row: SalesVisitRow): SalesVisit {
     facility_id: row.facility_id,
     visited_at: row.visited_at,
     result: row.result,
+    results: row.results?.length ? row.results : [row.result],
     memo: row.memo,
     registered_by: row.registered_by,
     created_by: row.created_by,
@@ -72,13 +75,20 @@ function normalizeDraft(draft: SalesVisitDraft) {
   if (!draft.visited_at) throw new Error('訪問日時は必須です。')
   const visitedAtIso = new Date(draft.visited_at).toISOString()
 
-  if (draft.result === 'met' && draft.contact_ids.length === 0) {
+  if (draft.results.length === 0) {
+    throw new Error('営業結果を1つ以上選択してください。')
+  }
+
+  if (draft.results.includes('met') && draft.contact_ids.length === 0) {
     throw new Error('面会済みの場合は面会者を1名以上選択してください。')
   }
 
+  const representativeResult = draft.results.includes('met') ? 'met' : draft.results[0]
+
   return {
     visited_at: visitedAtIso,
-    result: draft.result,
+    result: representativeResult,
+    results: draft.results,
     memo: draft.memo.trim(),
     next_follow_up_on: draft.next_follow_up_on || null,
     follow_up_note: draft.follow_up_note.trim(),
@@ -90,6 +100,7 @@ export type SalesVisitSummary = {
   facility_id: string
   visited_at: string
   result: SalesVisitResult
+  results: SalesVisitResult[]
   registered_by: string
   created_by: string | null
   service_ids: string[]
@@ -99,7 +110,7 @@ export type SalesVisitSummary = {
 export async function fetchAllSalesVisits(): Promise<SalesVisitSummary[]> {
   const { data, error } = await getSupabase()
     .from('sales_visits')
-    .select('facility_id, visited_at, result, registered_by, created_by, sales_visit_services ( service_id )')
+    .select('facility_id, visited_at, result, results, registered_by, created_by, sales_visit_services ( service_id )')
 
   if (error) throw error
   return (
@@ -107,6 +118,7 @@ export async function fetchAllSalesVisits(): Promise<SalesVisitSummary[]> {
       facility_id: string
       visited_at: string
       result: SalesVisitResult
+      results: SalesVisitResult[] | null
       registered_by: string
       created_by: string | null
       sales_visit_services?: { service_id: string }[] | null
@@ -115,6 +127,7 @@ export async function fetchAllSalesVisits(): Promise<SalesVisitSummary[]> {
     facility_id: row.facility_id,
     visited_at: row.visited_at,
     result: row.result,
+    results: row.results?.length ? row.results : [row.result],
     registered_by: row.registered_by,
     created_by: row.created_by,
     service_ids: (row.sales_visit_services ?? []).map((item) => item.service_id),
