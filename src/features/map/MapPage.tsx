@@ -17,6 +17,7 @@ import type {
   Service,
 } from '../../types/facility'
 import { facilityTypeLabel } from '../../types/facility'
+import { salesVisitHasResult } from '../../types/salesVisit'
 import { FacilityDetail, type FacilityDetailTab } from '../facilities/FacilityDetail'
 import { FacilityForm } from './FacilityForm'
 import { FacilityMap, type FacilityMonthlyStat } from './FacilityMap'
@@ -148,7 +149,7 @@ export function MapPage() {
         )
         stats[facility.id] = {
           visitCount: facilityVisits.length,
-          metCount: facilityVisits.filter((v) => v.result === 'met').length,
+          metCount: facilityVisits.filter((visit) => salesVisitHasResult(visit, 'met')).length,
           referralCount: facilityReferrals.length,
           startedCount: facilityReferrals.filter((r) => r.status === 'started').length,
         }

@@ -17,11 +17,27 @@ export function salesVisitResultLabel(result: SalesVisitResult): string {
   return SALES_VISIT_RESULTS.find((item) => item.value === result)?.label ?? result
 }
 
+export function salesVisitResultsLabel(
+  results: SalesVisitResult[],
+  fallback?: SalesVisitResult,
+): string {
+  const values = results.length > 0 ? results : fallback ? [fallback] : []
+  return values.map(salesVisitResultLabel).join('・')
+}
+
+export function salesVisitHasResult(
+  visit: Pick<SalesVisit, 'results' | 'result'>,
+  result: SalesVisitResult,
+): boolean {
+  return visit.results.length > 0 ? visit.results.includes(result) : visit.result === result
+}
+
 export type SalesVisit = {
   id: string
   facility_id: string
   visited_at: string
   result: SalesVisitResult
+  results: SalesVisitResult[]
   memo: string
   registered_by: string
   created_by: string | null
@@ -36,7 +52,7 @@ export type SalesVisit = {
 
 export type SalesVisitDraft = {
   visited_at: string
-  result: SalesVisitResult
+  results: SalesVisitResult[]
   contact_ids: string[]
   service_ids: string[]
   memo: string

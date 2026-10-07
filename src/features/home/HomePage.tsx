@@ -11,7 +11,7 @@ import { fetchAllReferralCases, type ReferralCaseSummary } from '../../lib/refer
 import { fetchAllSalesVisits, type SalesVisitSummary } from '../../lib/salesVisitsApi'
 import type { Facility, Service } from '../../types/facility'
 import { referralStatusLabel } from '../../types/referral'
-import { salesVisitResultLabel } from '../../types/salesVisit'
+import { salesVisitHasResult, salesVisitResultsLabel } from '../../types/salesVisit'
 import { FacilityDetail } from '../facilities/FacilityDetail'
 import styles from './HomePage.module.css'
 
@@ -124,7 +124,7 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
   )
 
   const overallVisitCount = monthVisits.length
-  const overallMetCount = monthVisits.filter((visit) => visit.result === 'met').length
+  const overallMetCount = monthVisits.filter((visit) => salesVisitHasResult(visit, 'met')).length
   const overallReferralCount = monthReferrals.length
 
   const myVisits = useMemo(
@@ -135,7 +135,7 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
     [monthVisits, activeStaffName],
   )
   const myVisitCount = myVisits.length
-  const myMetCount = myVisits.filter((visit) => visit.result === 'met').length
+  const myMetCount = myVisits.filter((visit) => salesVisitHasResult(visit, 'met')).length
 
   const serviceRows = useMemo(
     () =>
@@ -143,7 +143,7 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
         id: service.id,
         name: service.name,
         metCount: monthVisits.filter(
-          (visit) => visit.result === 'met' && visit.service_ids.includes(service.id),
+          (visit) => salesVisitHasResult(visit, 'met') && visit.service_ids.includes(service.id),
         ).length,
         referralCount: monthReferrals.filter((referral) => referral.service_id === service.id)
           .length,
@@ -164,7 +164,10 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
   }, [facilities])
 
   const monthVisitItems = useMemo(() => {
-    const rows = monthListKind === 'met' ? monthVisits.filter((visit) => visit.result === 'met') : monthVisits
+    const rows =
+      monthListKind === 'met'
+        ? monthVisits.filter((visit) => salesVisitHasResult(visit, 'met'))
+        : monthVisits
     return [...rows].sort((a, b) => b.visited_at.localeCompare(a.visited_at))
   }, [monthListKind, monthVisits])
 
@@ -393,7 +396,9 @@ export function HomePage({ onNavigate, onQuickEntry }: Props) {
                     <span className={styles.listItemName}>
                       {facilityNameById.get(visit.facility_id) ?? '（施設名なし）'}
                     </span>
-                    <span className={styles.listItemMeta}>{salesVisitResultLabel(visit.result)}</span>
+                    <span className={styles.listItemMeta}>
+                      {salesVisitResultsLabel(visit.results, visit.result)}
+                    </span>
                   </button>
                 ))
               )}

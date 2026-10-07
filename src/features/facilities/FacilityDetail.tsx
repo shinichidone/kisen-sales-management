@@ -54,7 +54,7 @@ import {
 } from '../../types/referral'
 import {
   SALES_VISIT_RESULTS,
-  salesVisitResultLabel,
+  salesVisitResultsLabel,
   type SalesVisit,
   type SalesVisitDraft,
   type SalesVisitResult,
@@ -108,7 +108,7 @@ const emptyContactDraft: ContactDraft = {
 function emptyVisitDraft(): SalesVisitDraft {
   return {
     visited_at: nowForDatetimeLocalInput(),
-    result: 'met',
+    results: ['met'],
     contact_ids: [],
     service_ids: [],
     memo: '',
@@ -242,6 +242,15 @@ export function FacilityDetail({
       service_ids: prev.service_ids.includes(serviceId)
         ? prev.service_ids.filter((id) => id !== serviceId)
         : [...prev.service_ids, serviceId],
+    }))
+  }
+
+  function toggleVisitResult(result: SalesVisitResult) {
+    setVisitDraft((previous) => ({
+      ...previous,
+      results: previous.results.includes(result)
+        ? previous.results.filter((value) => value !== result)
+        : [...previous.results, result],
     }))
   }
 
@@ -407,7 +416,7 @@ export function FacilityDetail({
     setEditingVisitId(visit.id)
     setVisitDraft({
       visited_at: toDatetimeLocalInput(visit.visited_at),
-      result: visit.result,
+      results: visit.results.length > 0 ? visit.results : [visit.result],
       contact_ids: visit.contact_ids,
       service_ids: visit.service_ids,
       memo: visit.memo,
@@ -845,15 +854,9 @@ export function FacilityDetail({
                     {SALES_VISIT_RESULTS.map((option) => (
                       <label key={option.value} className={styles.checkItem}>
                         <input
-                          type="radio"
-                          name="sales-visit-result"
-                          checked={visitDraft.result === option.value}
-                          onChange={() =>
-                            setVisitDraft((prev) => ({
-                              ...prev,
-                              result: option.value as SalesVisitResult,
-                            }))
-                          }
+                          type="checkbox"
+                          checked={visitDraft.results.includes(option.value)}
+                          onChange={() => toggleVisitResult(option.value)}
                         />
                         <span>{option.label}</span>
                       </label>
@@ -1008,7 +1011,7 @@ export function FacilityDetail({
                       <div key={visit.id} className={styles.card}>
                         <strong>
                           {new Date(visit.visited_at).toLocaleString('ja-JP')} ・{' '}
-                          {salesVisitResultLabel(visit.result)}
+                          {salesVisitResultsLabel(visit.results, visit.result)}
                         </strong>
                         {visit.contact_ids.length > 0 ? (
                           <span>
@@ -1113,7 +1116,7 @@ export function FacilityDetail({
                     {salesVisits.map((visit) => (
                       <option key={visit.id} value={visit.id}>
                         {new Date(visit.visited_at).toLocaleString('ja-JP')} ・
-                        {salesVisitResultLabel(visit.result)}
+                        {salesVisitResultsLabel(visit.results, visit.result)}
                       </option>
                     ))}
                   </select>
